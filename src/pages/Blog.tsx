@@ -5,6 +5,7 @@ import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestor
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../utils/firebaseErrors';
 import { useSiteSettings } from '../hooks/useSiteSettings';
+import { siteId } from '../constants/siteConfig';
 
 interface EditorialPost {
   id: string;
@@ -15,6 +16,8 @@ interface EditorialPost {
   date: string;
   image: string;
   status: string;
+  slug?: string;
+  position?: number;
 }
 
 export default function Editorial() {
@@ -25,9 +28,8 @@ export default function Editorial() {
 
   useEffect(() => {
     const q = query(
-      collection(db, 'editorial'), 
-      where('status', '==', 'Published'),
-      orderBy('date', 'desc')
+      collection(db, 'sites', siteId, 'editorial'), 
+      where('status', '==', 'Published')
     );
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -35,7 +37,11 @@ export default function Editorial() {
         id: doc.id,
         ...doc.data()
       })) as EditorialPost[];
-      setPosts(postsData);
+      
+      // Sort client-side so documents without 'position' are still included
+      const sortedData = postsData.sort((a, b) => (a.position || 0) - (b.position || 0));
+      
+      setPosts(sortedData);
       setLoading(false);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'editorial');
@@ -103,19 +109,17 @@ export default function Editorial() {
                 </div>
                 <div className="p-6 flex flex-col flex-grow">
                   <h3 className="text-xl font-bold text-stone-900 mb-3 leading-tight group-hover:text-lime-600 transition-colors">
-                    <Link to="#">{post.title}</Link>
+                    <Link to={`/blog/${post.slug || post.id}`}>{post.title}</Link>
                   </h3>
                   <p className="text-stone-600 text-sm mb-6 flex-grow">{post.excerpt}</p>
                   
-                  <div className="flex items-center justify-between mt-auto pt-4 border-t border-stone-100 text-xs text-stone-500">
-                    <div className="flex items-center gap-1">
-                      <User size={14} className="text-lime-500" />
-                      <span>{post.author}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar size={14} className="text-lime-500" />
-                      <span>{post.date}</span>
-                    </div>
+                  <div className="mt-auto pt-4 border-t border-stone-100">
+                    <Link 
+                      to={`/blog/${post.slug || post.id}`}
+                      className="text-lime-600 font-bold text-sm flex items-center gap-2 hover:gap-3 transition-all"
+                    >
+                      Read Article <ArrowRight size={16} />
+                    </Link>
                   </div>
                 </div>
               </article>

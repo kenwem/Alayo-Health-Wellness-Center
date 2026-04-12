@@ -5,6 +5,7 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../utils/firebaseErrors';
 import { useSiteSettings } from '../hooks/useSiteSettings';
+import { siteId } from '../constants/siteConfig';
 
 export default function Services() {
   const { settings } = useSiteSettings();
@@ -56,7 +57,7 @@ export default function Services() {
     setIsSubmitting(true);
 
     try {
-      await addDoc(collection(db, 'appointments'), {
+      await addDoc(collection(db, 'sites', siteId, 'appointments'), {
         ...formData,
         service: bookingService,
         status: 'Pending',
@@ -65,7 +66,7 @@ export default function Services() {
       setIsSubmitted(true);
       setFormData({ name: '', email: '', phone: '', date: '', time: '', message: '' });
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'appointments');
+      handleFirestoreError(error, OperationType.CREATE, `sites/${siteId}/appointments`);
     } finally {
       setIsSubmitting(false);
     }

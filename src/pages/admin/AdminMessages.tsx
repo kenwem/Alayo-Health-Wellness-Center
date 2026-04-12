@@ -3,6 +3,7 @@ import { Eye, Trash2, Search, X } from 'lucide-react';
 import { collection, onSnapshot, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/firebaseErrors';
+import { siteId } from '../../constants/siteConfig';
 
 interface Message {
   id: string;
@@ -17,9 +18,12 @@ interface Message {
 export default function AdminMessages() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
-    const q = query(collection(db, 'messages'), orderBy('date', 'desc'));
+    const q = query(collection(db, 'sites', siteId, 'messages'), orderBy('date', sortOrder));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const messagesData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -28,11 +32,14 @@ export default function AdminMessages() {
       setMessages(messagesData);
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'messages');
+      handleFirestoreError(error, OperationType.LIST, `sites/${siteId}/messages`);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [sortOrder]);
+
+  const totalPages = Math.ceil(messages.length / itemsPerPage);
+  const paginatedMessages = messages.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const [viewingMessage, setViewingMessage] = useState<Message | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
@@ -44,10 +51,10 @@ export default function AdminMessages() {
   const confirmDelete = async () => {
     if (deleteConfirmId !== null) {
       try {
-        await deleteDoc(doc(db, 'messages', deleteConfirmId));
+        await deleteDoc(doc(db, 'sites', siteId, 'messages', deleteConfirmId));
         setDeleteConfirmId(null);
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `messages/${deleteConfirmId}`);
+        handleFirestoreError(error, OperationType.DELETE, `sites/${siteId}/messages/${deleteConfirmId}`);
       }
     }
   };
@@ -56,9 +63,9 @@ export default function AdminMessages() {
     setViewingMessage(msg);
     if (msg.status === 'Unread') {
       try {
-        await updateDoc(doc(db, 'messages', msg.id), { status: 'Read' });
+        await updateDoc(doc(db, 'sites', siteId, 'messages', msg.id), { status: 'Read' });
       } catch (error) {
-        handleFirestoreError(error, OperationType.UPDATE, `messages/${msg.id}`);
+        handleFirestoreError(error, OperationType.UPDATE, `sites/${siteId}/messages/${msg.id}`);
       }
     }
   };
@@ -79,6 +86,17 @@ export default function AdminMessages() {
             />
             <Search className="absolute left-3 top-2.5 text-stone-400" size={20} />
           </div>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-stone-500">Sort by Date:</span>
+            <select 
+              value={sortOrder} 
+              onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
+              className="border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-lime-500"
+            >
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
@@ -92,7 +110,7 @@ export default function AdminMessages() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-200">
-              {messages.map((msg) => (
+              {paginatedMessages.map((msg) => (
                 <tr key={msg.id} className={`hover:bg-stone-50 ${msg.status === 'Unread' ? 'bg-stone-50/50' : ''}`}>
                   <td className="px-6 py-4">
                     <div className="font-medium text-stone-800">{msg.name}</div>
@@ -114,6 +132,26 @@ export default function AdminMessages() {
             </tbody>
           </table>
         </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-stone-200 flex justify-center items-center gap-4">
+            <button 
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              className="px-3 py-1 border border-stone-200 rounded-lg disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-stone-600">Page {currentPage} of {totalPages}</span>
+            <button 
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              className="px-3 py-1 border border-stone-200 rounded-lg disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {/* View Message Modal */}

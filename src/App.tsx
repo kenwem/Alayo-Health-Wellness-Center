@@ -13,6 +13,7 @@ import About from './pages/About';
 import Services from './pages/Services';
 import Products from './pages/Products';
 import Editorial from './pages/Blog';
+import BlogPost from './pages/BlogPost';
 import Contact from './pages/Contact';
 import Sitemap from './pages/Sitemap';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -23,6 +24,7 @@ import AdminLogin from './pages/admin/AdminLogin';
 import AdminProducts from './pages/admin/AdminProducts';
 import AdminBooks from './pages/admin/AdminBooks';
 import AdminEditorial from './pages/admin/AdminBlog';
+import CommentModeration from './pages/admin/CommentModeration';
 import AdminMessages from './pages/admin/AdminMessages';
 import AdminSettings from './pages/admin/AdminSettings';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -37,10 +39,44 @@ const RequireAuth = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        localStorage.setItem('admin_last_activity', Date.now().toString());
+      }
       setLoading(false);
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const resetTimer = () => {
+      localStorage.setItem('admin_last_activity', Date.now().toString());
+    };
+
+    const checkInactivity = () => {
+      const lastActivity = localStorage.getItem('admin_last_activity');
+      if (lastActivity) {
+        const elapsed = Date.now() - parseInt(lastActivity);
+        const thirtyMinutes = 30 * 60 * 1000;
+        if (elapsed > thirtyMinutes) {
+          console.log('Session expired due to inactivity');
+          auth.signOut();
+          localStorage.removeItem('admin_last_activity');
+        }
+      }
+    };
+
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    events.forEach(event => window.addEventListener(event, resetTimer));
+
+    const interval = setInterval(checkInactivity, 30000); // Check every 30 seconds
+
+    return () => {
+      events.forEach(event => window.removeEventListener(event, resetTimer));
+      clearInterval(interval);
+    };
+  }, [user]);
 
   if (loading) {
     return (
@@ -61,7 +97,7 @@ export default function App() {
   useEffect(() => {
     async function testConnection() {
       try {
-        await getDocFromServer(doc(db, 'settings', 'site'));
+        await getDocFromServer(doc(db, 'sites', 'siteB', 'settings', 'site'));
         console.log('Firestore connection verified');
       } catch (error) {
         if (error instanceof Error && error.message.includes('the client is offline')) {
@@ -82,6 +118,9 @@ export default function App() {
             <Route path="services" element={<Services />} />
             <Route path="products" element={<Products />} />
             <Route path="blog" element={<Editorial />} />
+            <Route path="blog/:slug" element={<BlogPost />} />
+            <Route path="editorial" element={<Editorial />} />
+            <Route path="editorial/:slug" element={<BlogPost />} />
             <Route path="contact" element={<Contact />} />
             <Route path="sitemap" element={<Sitemap />} />
           </Route>
@@ -95,6 +134,7 @@ export default function App() {
             <Route path="products" element={<AdminProducts />} />
             <Route path="books" element={<AdminBooks />} />
             <Route path="blog" element={<AdminEditorial />} />
+            <Route path="comments" element={<CommentModeration />} />
             <Route path="messages" element={<AdminMessages />} />
             <Route path="settings" element={<AdminSettings />} />
           </Route>

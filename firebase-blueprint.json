@@ -99,27 +99,57 @@
     }
   },
   "firestore": {
-    "settings/site": {
+    "sites/{siteId}/settings/site": {
       "schema": { "$ref": "SiteSettings" },
       "description": "Global site settings"
     },
-    "products/{productId}": {
+    "sites/{siteId}/products/{productId}": {
       "schema": { "$ref": "Product" },
       "description": "Product inventory"
     },
-    "editorial/{articleId}": {
+    "sites/{siteId}/editorial/{articleId}": {
       "schema": { "$ref": "Editorial" },
       "description": "Editorial articles"
     },
-    "appointments/{appointmentId}": {
+    "sites/{siteId}/services/{serviceId}": {
+      "schema": { "type": "object" },
+      "description": "Services content"
+    },
+    "sites/{siteId}/{collection}/{docId}/comments/{commentId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "userEmail": { "type": "string" },
+          "text": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "status": { "type": "string", "enum": ["pending", "approved"] }
+        }
+      },
+      "description": "Comments on any content"
+    },
+    "sites/{siteId}/{collection}/{docId}/comments/{commentId}/replies/{replyId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "string" },
+          "userEmail": { "type": "string" },
+          "text": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "status": { "type": "string", "enum": ["pending", "approved"] }
+        }
+      },
+      "description": "Replies to comments"
+    },
+    "sites/{siteId}/appointments/{appointmentId}": {
       "schema": { "$ref": "Appointment" },
       "description": "User appointments"
     },
-    "orders/{orderId}": {
+    "sites/{siteId}/orders/{orderId}": {
       "schema": { "$ref": "Order" },
       "description": "Customer orders"
     },
-    "messages/{messageId}": {
+    "sites/{siteId}/messages/{messageId}": {
       "schema": { "$ref": "Message" },
       "description": "Contact messages"
     },

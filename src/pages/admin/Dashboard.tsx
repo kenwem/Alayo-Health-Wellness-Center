@@ -2,6 +2,7 @@ import { Users, Calendar, ShoppingBag, FileText, Package, BookOpen, MessageSquar
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
+import { siteId } from '../../constants/siteConfig';
 
 export default function Dashboard() {
   const [counts, setCounts] = useState({
@@ -15,12 +16,12 @@ export default function Dashboard() {
 
   useEffect(() => {
     const unsubscribers = [
-      onSnapshot(query(collection(db, 'appointments'), where('status', '==', 'Pending')), (s) => setCounts(prev => ({ ...prev, appointments: s.size }))),
-      onSnapshot(query(collection(db, 'orders'), where('status', '==', 'Processing')), (s) => setCounts(prev => ({ ...prev, orders: s.size }))),
-      onSnapshot(query(collection(db, 'messages'), where('status', '==', 'Unread')), (s) => setCounts(prev => ({ ...prev, messages: s.size }))),
-      onSnapshot(collection(db, 'products'), (s) => setCounts(prev => ({ ...prev, products: s.size }))),
-      onSnapshot(collection(db, 'books'), (s) => setCounts(prev => ({ ...prev, books: s.size }))),
-      onSnapshot(collection(db, 'editorial'), (s) => setCounts(prev => ({ ...prev, editorial: s.size }))),
+      onSnapshot(query(collection(db, 'sites', siteId, 'appointments'), where('status', '==', 'Pending')), (s) => setCounts(prev => ({ ...prev, appointments: s.size }))),
+      onSnapshot(query(collection(db, 'sites', siteId, 'orders'), where('status', '==', 'Processing')), (s) => setCounts(prev => ({ ...prev, orders: s.size }))),
+      onSnapshot(query(collection(db, 'sites', siteId, 'messages'), where('status', '==', 'Unread')), (s) => setCounts(prev => ({ ...prev, messages: s.size }))),
+      onSnapshot(collection(db, 'sites', siteId, 'products'), (s) => setCounts(prev => ({ ...prev, products: s.size }))),
+      onSnapshot(collection(db, 'sites', siteId, 'books'), (s) => setCounts(prev => ({ ...prev, books: s.size }))),
+      onSnapshot(collection(db, 'sites', siteId, 'editorial'), (s) => setCounts(prev => ({ ...prev, editorial: s.size }))),
     ];
     return () => unsubscribers.forEach(unsub => unsub());
   }, []);

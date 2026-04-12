@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, X, Save } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, Save, Loader2 } from 'lucide-react';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import ImageUpload from '../../components/admin/ImageUpload';
 import { handleFirestoreError, OperationType } from '../../utils/firebaseErrors';
+import { siteId } from '../../constants/siteConfig';
 
 interface Product {
   id: string;
@@ -14,31 +15,67 @@ interface Product {
   stock: number;
   imageUrl: string;
   shortDescription: string;
+  position?: number;
 }
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'price' | 'stock' | 'position'>('position');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
-    const q = query(collection(db, 'products'), orderBy('name', 'asc'));
+    const q = query(collection(db, 'sites', siteId, 'products'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const productsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Product[];
-      setProducts(productsData);
+      
+      // Sort client-side so documents without 'position' are still included
+      const sortedData = productsData.sort((a, b) => (a.position || 0) - (b.position || 0));
+      
+      setProducts(sortedData);
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'products');
+      handleFirestoreError(error, OperationType.LIST, `sites/${siteId}/products`);
     });
 
     return () => unsubscribe();
   }, []);
 
+  const filteredProducts = products.filter(product => 
+    product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    product.shortDescription?.toLowerCase().includes(searchQuery.toLowerCase())
+  ).sort((a, b) => {
+    const order = sortOrder === 'asc' ? 1 : -1;
+    
+    if (sortBy === 'name') return a.name.localeCompare(b.name) * order;
+    if (sortBy === 'stock') return (a.stock - b.stock) * order;
+    if (sortBy === 'position') return ((a.position || 0) - (b.position || 0)) * order;
+    
+    if (sortBy === 'price') {
+      const getPrice = (p: Product) => {
+        const priceStr = p.salePrice || p.price;
+        return parseFloat(priceStr.replace('₦', '').replace(',', '')) || 0;
+      };
+      return (getPrice(a) - getPrice(b)) * order;
+    }
+    
+    return 0;
+  });
+
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage);
+  const paginatedProducts = filteredProducts.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: '',
     category: '',
@@ -46,7 +83,9 @@ export default function AdminProducts() {
     salePrice: '',
     stock: '',
     imageUrl: '',
-    shortDescription: ''
+    manualImageUrl: '',
+    shortDescription: '',
+    position: 0
   });
 
   const handleDelete = (id: string) => {
@@ -56,10 +95,10 @@ export default function AdminProducts() {
   const confirmDelete = async () => {
     if (deleteConfirmId !== null) {
       try {
-        await deleteDoc(doc(db, 'products', deleteConfirmId));
+        await deleteDoc(doc(db, 'sites', siteId, 'products', deleteConfirmId));
         setDeleteConfirmId(null);
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `products/${deleteConfirmId}`);
+        handleFirestoreError(error, OperationType.DELETE, `sites/${siteId}/products/${deleteConfirmId}`);
       }
     }
   };
@@ -73,13 +112,16 @@ export default function AdminProducts() {
       salePrice: product.salePrice ? product.salePrice.replace('₦', '').replace(',', '') : '',
       stock: product.stock.toString(),
       imageUrl: product.imageUrl,
-      shortDescription: product.shortDescription || ''
+      manualImageUrl: product.imageUrl,
+      shortDescription: product.shortDescription || '',
+      position: product.position || 0
     });
     setIsAddModalOpen(true);
   };
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     const formattedPrice = newProduct.price.startsWith('₦') ? newProduct.price : `₦${newProduct.price}`;
     const formattedSalePrice = newProduct.salePrice ? (newProduct.salePrice.startsWith('₦') ? newProduct.salePrice : `₦${newProduct.salePrice}`) : '';
     
@@ -89,21 +131,29 @@ export default function AdminProducts() {
       price: formattedPrice,
       salePrice: formattedSalePrice,
       stock: Number(newProduct.stock),
-      imageUrl: newProduct.imageUrl,
-      shortDescription: newProduct.shortDescription
+      imageUrl: newProduct.manualImageUrl || newProduct.imageUrl,
+      shortDescription: newProduct.shortDescription,
+      position: Number(newProduct.position) || 0
     };
+
+    console.log('Submitting product data:', productData);
 
     try {
       if (editingId) {
-        await updateDoc(doc(db, 'products', editingId), productData);
+        console.log('Updating product:', editingId);
+        await updateDoc(doc(db, 'sites', siteId, 'products', editingId), productData);
       } else {
-        await addDoc(collection(db, 'products'), productData);
+        console.log('Adding new product');
+        await addDoc(collection(db, 'sites', siteId, 'products'), productData);
       }
       setIsAddModalOpen(false);
       setEditingId(null);
-      setNewProduct({ name: '', category: '', price: '', salePrice: '', stock: '', imageUrl: '', shortDescription: '' });
+      setNewProduct({ name: '', category: '', price: '', salePrice: '', stock: '', imageUrl: '', manualImageUrl: '', shortDescription: '', position: 0 });
     } catch (error) {
-      handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, editingId ? `products/${editingId}` : 'products');
+      console.error('Error saving product:', error);
+      handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, editingId ? `sites/${siteId}/products/${editingId}` : `sites/${siteId}/products`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -114,7 +164,7 @@ export default function AdminProducts() {
         <button 
           onClick={() => {
             setEditingId(null);
-            setNewProduct({ name: '', category: '', price: '', salePrice: '', stock: '', imageUrl: '', shortDescription: '' });
+            setNewProduct({ name: '', category: '', price: '', salePrice: '', stock: '', imageUrl: '', manualImageUrl: '', shortDescription: '', position: 0 });
             setIsAddModalOpen(true);
           }}
           className="bg-lime-600 hover:bg-lime-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
@@ -125,20 +175,49 @@ export default function AdminProducts() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
-        <div className="p-4 border-b border-stone-200 flex justify-between items-center">
-          <div className="relative w-64">
+        <div className="p-4 border-b border-stone-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="relative w-full sm:w-64">
             <input
               type="text"
               placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500"
             />
             <Search className="absolute left-3 top-2.5 text-stone-400" size={20} />
+          </div>
+          <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-stone-500">Sort by:</span>
+              <select 
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-lime-500"
+              >
+                <option value="position">Position</option>
+                <option value="name">Name</option>
+                <option value="price">Price</option>
+                <option value="stock">Stock</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-stone-500">Order:</span>
+              <select 
+                value={sortOrder} 
+                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                className="border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-lime-500"
+              >
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </div>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-stone-50 border-b border-stone-200">
               <tr>
+                <th className="px-6 py-4 text-sm font-semibold text-stone-600">Pos</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Image</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Product Name</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Category</th>
@@ -148,8 +227,9 @@ export default function AdminProducts() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-200">
-              {products.map((product) => (
+              {paginatedProducts.map((product) => (
                 <tr key={product.id} className="hover:bg-stone-50">
+                  <td className="px-6 py-4 text-stone-400 text-xs font-mono">{product.position || 0}</td>
                   <td className="px-6 py-4">
                     {product.imageUrl ? (
                       <img src={product.imageUrl} alt={product.name} className="w-12 h-12 object-cover rounded-md" referrerPolicy="no-referrer" />
@@ -182,6 +262,26 @@ export default function AdminProducts() {
             </tbody>
           </table>
         </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-stone-200 flex justify-center items-center gap-4">
+            <button 
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              className="px-3 py-1 border border-stone-200 rounded-lg disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-stone-600">Page {currentPage} of {totalPages}</span>
+            <button 
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              className="px-3 py-1 border border-stone-200 rounded-lg disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Product Modal */}
@@ -196,6 +296,11 @@ export default function AdminProducts() {
             </div>
             <div className="overflow-y-auto p-6">
               <form id="productForm" onSubmit={handleAddSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Display Position (Order)</label>
+                  <input type="number" value={newProduct.position} onChange={e => setNewProduct({...newProduct, position: Number(e.target.value)})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" placeholder="0" />
+                  <p className="text-[10px] text-stone-500 mt-1">Lower numbers appear first.</p>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-stone-700 mb-1">Product Name</label>
                   <input required type="text" value={newProduct.name} onChange={e => setNewProduct({...newProduct, name: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" />
@@ -226,14 +331,33 @@ export default function AdminProducts() {
                 <ImageUpload
                   label="Product Image"
                   value={newProduct.imageUrl}
-                  onChange={(url) => setNewProduct({...newProduct, imageUrl: url})}
+                  onChange={(url) => setNewProduct({...newProduct, imageUrl: url, manualImageUrl: url})}
                   folder="products"
                 />
+
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Or Image URL</label>
+                  <input 
+                    type="text" 
+                    value={newProduct.manualImageUrl} 
+                    onChange={e => setNewProduct({...newProduct, manualImageUrl: e.target.value})} 
+                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" 
+                    placeholder="https://example.com/product.jpg"
+                  />
+                </div>
               </form>
             </div>
             <div className="p-6 border-t border-stone-100 flex justify-end gap-3 bg-stone-50">
               <button type="button" onClick={() => { setIsAddModalOpen(false); setEditingId(null); }} className="px-4 py-2 text-stone-600 hover:bg-stone-200 rounded-lg transition-colors">Cancel</button>
-              <button type="submit" form="productForm" className="px-4 py-2 bg-lime-600 hover:bg-lime-700 text-white rounded-lg transition-colors">Save Product</button>
+              <button 
+                type="submit" 
+                form="productForm" 
+                disabled={isSaving}
+                className="px-4 py-2 bg-lime-600 hover:bg-lime-700 text-white rounded-lg transition-colors disabled:bg-stone-400 flex items-center gap-2"
+              >
+                {isSaving && <Loader2 className="animate-spin" size={18} />}
+                {isSaving ? 'Saving...' : 'Save Product'}
+              </button>
             </div>
           </div>
         </div>

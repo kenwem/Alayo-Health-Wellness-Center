@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../utils/firebaseErrors';
+import { siteId } from '../constants/siteConfig';
 
 interface Product {
   id: string;
@@ -13,6 +14,7 @@ interface Product {
   stock: number;
   imageUrl: string;
   shortDescription: string;
+  position?: number;
 }
 
 export default function Products() {
@@ -20,18 +22,23 @@ export default function Products() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'position' | 'price-asc' | 'price-desc' | 'name'>('position');
 
   useEffect(() => {
-    const q = query(collection(db, 'products'), orderBy('name', 'asc'));
+    const q = query(collection(db, 'sites', siteId, 'products'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const productsData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Product[];
-      setProducts(productsData);
+      
+      // Sort client-side so documents without 'position' are still included
+      const sortedData = productsData.sort((a, b) => (a.position || 0) - (b.position || 0));
+      
+      setProducts(sortedData);
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'products');
+      handleFirestoreError(error, OperationType.LIST, `sites/${siteId}/products`);
     });
 
     return () => unsubscribe();
@@ -42,6 +49,18 @@ export default function Products() {
     const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                          product.shortDescription?.toLowerCase().includes(searchQuery.toLowerCase());
     return matchesCategory && matchesSearch;
+  }).sort((a, b) => {
+    if (sortBy === 'position') return (a.position || 0) - (b.position || 0);
+    if (sortBy === 'name') return a.name.localeCompare(b.name);
+    
+    const getPrice = (p: Product) => {
+      const priceStr = p.salePrice || p.price;
+      return parseFloat(priceStr.replace('₦', '').replace(',', '')) || 0;
+    };
+    
+    if (sortBy === 'price-asc') return getPrice(a) - getPrice(b);
+    if (sortBy === 'price-desc') return getPrice(b) - getPrice(a);
+    return 0;
   });
 
   const categories = ['All', 'Herbal Remedies', 'Energy Medicine', 'Nutraceuticals', 'Organic Skincare'];
@@ -65,7 +84,6 @@ export default function Products() {
           </p>
         </div>
       </section>
-
       {/* Products Grid */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -86,6 +104,19 @@ export default function Products() {
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 pr-4 py-2 bg-white border border-stone-200 rounded-full focus:outline-none focus:ring-2 focus:ring-lime-500 w-full"
                 />
+              </div>
+              <div className="relative">
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as any)}
+                  className="pl-10 pr-8 py-2 bg-white border border-stone-200 rounded-full focus:outline-none focus:ring-2 focus:ring-lime-500 w-full appearance-none text-sm font-medium text-stone-600"
+                >
+                  <option value="position">Default Order</option>
+                  <option value="name">Name (A-Z)</option>
+                  <option value="price-asc">Price: Low to High</option>
+                  <option value="price-desc">Price: High to Low</option>
+                </select>
               </div>
               <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 no-scrollbar">
                 {categories.map((cat) => (
@@ -158,22 +189,6 @@ export default function Products() {
               </button>
             </div>
           )}
-
-          {/* E-commerce Notice */}
-          <div className="mt-20 bg-lime-50 rounded-3xl p-8 md:p-12 text-center border border-lime-100">
-            <h3 className="text-2xl font-bold text-stone-900 mb-4">Online Store Coming Soon</h3>
-            <p className="text-lg text-stone-600 max-w-2xl mx-auto mb-8">
-              We are currently developing our full e-commerce platform. For now, all proprietary herbal products and crystals can be ordered directly via WhatsApp or purchased at our Abeokuta and Lagos clinics.
-            </p>
-            <a
-              href="https://wa.me/2348034170747"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex justify-center items-center gap-2 bg-lime-500 hover:bg-lime-600 text-white px-8 py-4 rounded-full text-lg font-semibold transition-all shadow-md"
-            >
-              Order via WhatsApp <ArrowRight size={20} />
-            </a>
-          </div>
 
         </div>
       </section>

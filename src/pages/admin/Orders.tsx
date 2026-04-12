@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Trash2, X, Plus, Edit } from 'lucide-react';
+import { Trash2, X, Plus, Edit, Loader2 } from 'lucide-react';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/firebaseErrors';
+import { siteId } from '../../constants/siteConfig';
 
 interface Order {
   id: string;
@@ -16,9 +17,12 @@ interface Order {
 export default function Orders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
-    const q = query(collection(db, 'orders'), orderBy('orderId', 'desc'));
+    const q = query(collection(db, 'sites', siteId, 'orders'), orderBy('orderId', sortOrder));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const ordersData = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -27,15 +31,19 @@ export default function Orders() {
       setOrders(ordersData);
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'orders');
+      handleFirestoreError(error, OperationType.LIST, `sites/${siteId}/orders`);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [sortOrder]);
+
+  const totalPages = Math.ceil(orders.length / itemsPerPage);
+  const paginatedOrders = orders.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [newOrder, setNewOrder] = useState({
     orderId: '',
     name: '',
@@ -51,10 +59,10 @@ export default function Orders() {
   const confirmDelete = async () => {
     if (deleteConfirmId !== null) {
       try {
-        await deleteDoc(doc(db, 'orders', deleteConfirmId));
+        await deleteDoc(doc(db, 'sites', siteId, 'orders', deleteConfirmId));
         setDeleteConfirmId(null);
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `orders/${deleteConfirmId}`);
+        handleFirestoreError(error, OperationType.DELETE, `sites/${siteId}/orders/${deleteConfirmId}`);
       }
     }
   };
@@ -73,6 +81,7 @@ export default function Orders() {
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     const formattedOrderId = newOrder.orderId.startsWith('#') ? newOrder.orderId : `#${newOrder.orderId}`;
     const formattedTotal = newOrder.total.startsWith('₦') ? newOrder.total : `₦${newOrder.total}`;
     
@@ -87,15 +96,17 @@ export default function Orders() {
 
     try {
       if (editingId) {
-        await updateDoc(doc(db, 'orders', editingId), orderData);
+        await updateDoc(doc(db, 'sites', siteId, 'orders', editingId), orderData);
       } else {
-        await addDoc(collection(db, 'orders'), orderData);
+        await addDoc(collection(db, 'sites', siteId, 'orders'), orderData);
       }
       setIsAddModalOpen(false);
       setEditingId(null);
       setNewOrder({ orderId: '', name: '', product: '', total: '', status: 'Processing' });
     } catch (error) {
-      handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, editingId ? `orders/${editingId}` : 'orders');
+      handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, editingId ? `sites/${siteId}/orders/${editingId}` : `sites/${siteId}/orders`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -103,16 +114,29 @@ export default function Orders() {
     <div className="bg-white rounded-xl shadow-sm border border-stone-100 overflow-hidden">
       <div className="p-6 border-b border-stone-100 flex justify-between items-center">
         <h2 className="text-lg font-bold text-stone-800">Product Orders</h2>
-        <button 
-          onClick={() => {
-            setEditingId(null);
-            setNewOrder({ orderId: '', name: '', product: '', total: '', status: 'Processing' });
-            setIsAddModalOpen(true);
-          }}
-          className="bg-lime-500 hover:bg-lime-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
-        >
-          <Plus size={16} /> Add New
-        </button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-stone-500">Sort by Order ID:</span>
+            <select 
+              value={sortOrder} 
+              onChange={(e) => setSortOrder(e.target.value as 'desc' | 'asc')}
+              className="border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-lime-500"
+            >
+              <option value="desc">Newest First</option>
+              <option value="asc">Oldest First</option>
+            </select>
+          </div>
+          <button 
+            onClick={() => {
+              setEditingId(null);
+              setNewOrder({ orderId: '', name: '', product: '', total: '', status: 'Processing' });
+              setIsAddModalOpen(true);
+            }}
+            className="bg-lime-500 hover:bg-lime-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors flex items-center gap-2"
+          >
+            <Plus size={16} /> Add New
+          </button>
+        </div>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-left border-collapse">
@@ -127,7 +151,7 @@ export default function Orders() {
             </tr>
           </thead>
           <tbody className="divide-y divide-stone-100">
-            {orders.map((order) => (
+            {paginatedOrders.map((order) => (
               <tr key={order.id} className="text-stone-700">
                 <td className="p-4 font-medium">{order.orderId}</td>
                 <td className="p-4">{order.name}</td>
@@ -147,6 +171,26 @@ export default function Orders() {
           </tbody>
         </table>
       </div>
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-stone-200 flex justify-center items-center gap-4">
+          <button 
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+            className="px-3 py-1 border border-stone-200 rounded-lg disabled:opacity-50"
+          >
+            Previous
+          </button>
+          <span className="text-sm text-stone-600">Page {currentPage} of {totalPages}</span>
+          <button 
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+            className="px-3 py-1 border border-stone-200 rounded-lg disabled:opacity-50"
+          >
+            Next
+          </button>
+        </div>
+      )}
 
       {/* Add/Edit Order Modal */}
       {isAddModalOpen && (
@@ -187,7 +231,14 @@ export default function Orders() {
               </div>
               <div className="pt-4 flex justify-end gap-3">
                 <button type="button" onClick={() => { setIsAddModalOpen(false); setEditingId(null); }} className="px-4 py-2 text-stone-600 hover:bg-stone-100 rounded-lg transition-colors">Cancel</button>
-                <button type="submit" className="px-4 py-2 bg-lime-600 hover:bg-lime-700 text-white rounded-lg transition-colors">Save Order</button>
+                <button 
+                  type="submit" 
+                  disabled={isSaving}
+                  className="px-4 py-2 bg-lime-600 hover:bg-lime-700 text-white rounded-lg transition-colors disabled:bg-stone-400 flex items-center gap-2"
+                >
+                  {isSaving && <Loader2 className="animate-spin" size={18} />}
+                  {isSaving ? 'Saving...' : 'Save Order'}
+                </button>
               </div>
             </form>
           </div>

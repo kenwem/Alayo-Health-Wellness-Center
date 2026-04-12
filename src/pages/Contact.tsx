@@ -3,6 +3,7 @@ import { MapPin, Phone, Mail, Clock, MessageCircle, Send, CheckCircle2 } from 'l
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../utils/firebaseErrors';
+import { siteId } from '../constants/siteConfig';
 
 export default function Contact() {
   const [formData, setFormData] = useState({
@@ -19,7 +20,7 @@ export default function Contact() {
     setIsSubmitting(true);
 
     try {
-      await addDoc(collection(db, 'messages'), {
+      await addDoc(collection(db, 'sites', siteId, 'messages'), {
         ...formData,
         status: 'Unread',
         date: new Date().toLocaleString(),
@@ -28,7 +29,7 @@ export default function Contact() {
       setIsSubmitted(true);
       setFormData({ name: '', email: '', subject: '', message: '' });
     } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, 'messages');
+      handleFirestoreError(error, OperationType.CREATE, `sites/${siteId}/messages`);
     } finally {
       setIsSubmitting(false);
     }

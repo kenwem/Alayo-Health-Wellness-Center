@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
+import { siteId } from '../constants/siteConfig';
 
 export interface SiteSettings {
+  siteName: string;
   logoUrl: string;
   heroBgUrl: string;
   aboutBgUrl: string;
@@ -12,6 +14,7 @@ export interface SiteSettings {
 }
 
 const defaultSettings: SiteSettings = {
+  siteName: 'Alayo Health & Wellness',
   logoUrl: 'https://i.imgur.com/J8eXjYF.jpg',
   heroBgUrl: 'https://i.imgur.com/bx3aTpx.jpg',
   aboutBgUrl: 'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?q=80&w=2070&auto=format&fit=crop',
@@ -22,13 +25,13 @@ const defaultSettings: SiteSettings = {
 
 export function useSiteSettings() {
   const [settings, setSettings] = useState<SiteSettings>(() => {
-    const cached = localStorage.getItem('site_settings_cache');
+    const cached = localStorage.getItem(`site_settings_cache_${siteId}`);
     return cached ? JSON.parse(cached) : defaultSettings;
   });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(doc(db, 'settings', 'site'), (doc) => {
+    const unsubscribe = onSnapshot(doc(db, 'sites', siteId, 'settings', 'site'), (doc) => {
       if (doc.exists()) {
         const firestoreData = doc.data();
         
@@ -56,6 +59,7 @@ export function useSiteSettings() {
         };
 
         const data: SiteSettings = {
+          siteName: firestoreData.siteName || defaultSettings.siteName,
           logoUrl: ensureDirectImgur(isDefaultOrEmpty(firestoreData.logoUrl) ? defaultSettings.logoUrl : firestoreData.logoUrl) as string,
           heroBgUrl: ensureDirectImgur(isDefaultOrEmpty(firestoreData.heroBgUrl) ? defaultSettings.heroBgUrl : firestoreData.heroBgUrl) as string,
           aboutBgUrl: ensureDirectImgur(isDefaultOrEmpty(firestoreData.aboutBgUrl) ? defaultSettings.aboutBgUrl : firestoreData.aboutBgUrl) as string,
@@ -64,7 +68,7 @@ export function useSiteSettings() {
           ceoPhotoUrl: ensureDirectImgur(isDefaultOrEmpty(firestoreData.ceoPhotoUrl) ? defaultSettings.ceoPhotoUrl : firestoreData.ceoPhotoUrl) as string,
         };
         setSettings(data);
-        localStorage.setItem('site_settings_cache', JSON.stringify(data));
+        localStorage.setItem(`site_settings_cache_${siteId}`, JSON.stringify(data));
       }
       setLoading(false);
     }, (error) => {

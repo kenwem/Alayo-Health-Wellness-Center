@@ -14,70 +14,63 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function isAdmin() {
-      return isAuthenticated() &&
-        (
-          (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
-          (request.auth.token.email == "kennywemson1@gmail.com" && request.auth.token.email_verified == true)
-        );
-    }
-
-    function hasRequiredFields(fields) {
-      return request.resource.data.keys().hasAll(fields);
-    }
-
-    function isValidEmail(email) {
-      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
-    }
-
-    function isValidUrl(url) {
-      return url is string && (url.matches("^https://.*") || url.matches("^http://.*"));
+    function isSiteAdmin() {
+      return isAuthenticated() && (
+        request.auth.token.email.matches("(?i)osenialayo@gmail.com") || 
+        request.auth.token.email.matches("(?i)kennywemson1@gmail.com")
+      );
     }
 
     // ===============================================================
     // Rules
     // ===============================================================
 
+    match /sites/{siteId} {
+      // Allow read for all public collections, write for admin
+      match /{collection}/{docId} {
+        allow read: if true;
+        allow write: if isSiteAdmin();
+      }
+
+      // Special rules for private collections (appointments, orders, messages)
+      match /appointments/{appointmentId} {
+        allow read: if isSiteAdmin();
+        allow create: if true;
+        allow update, delete: if isSiteAdmin();
+      }
+
+      match /orders/{orderId} {
+        allow read: if isSiteAdmin();
+        allow create: if true;
+        allow update, delete: if isSiteAdmin();
+      }
+
+      match /messages/{messageId} {
+        allow read: if isSiteAdmin();
+        allow create: if true;
+        allow update, delete: if isSiteAdmin();
+      }
+
+      // Generic comment system for any collection
+      match /{collection}/{docId}/comments/{commentId} {
+        allow read: if resource.data.status == "approved" || isSiteAdmin();
+        allow create: if isAuthenticated();
+        allow update: if isSiteAdmin();
+        allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isSiteAdmin());
+
+        match /replies/{replyId} {
+          allow read: if resource.data.status == "approved" || isSiteAdmin();
+          allow create: if isAuthenticated();
+          allow update: if isSiteAdmin();
+          allow delete: if isAuthenticated() && (request.auth.uid == resource.data.userId || isSiteAdmin());
+        }
+      }
+    }
+
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
-      allow create: if isAuthenticated() && isOwner(userId) && 
-        request.resource.data.keys().hasAll(['uid', 'email', 'role']) &&
-        request.resource.data.role == 'client';
-      allow update: if isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role);
-    }
-
-    match /settings/site {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /products/{productId} {
-      allow read: if true;
-      allow write: if isAdmin();
-    }
-
-    match /editorial/{articleId} {
-      allow read: if resource.data.status == 'Published' || isAdmin();
-      allow write: if isAdmin();
-    }
-
-    match /appointments/{appointmentId} {
-      allow read: if isAdmin();
-      allow create: if true; // Allow guest bookings
-      allow update, delete: if isAdmin();
-    }
-
-    match /orders/{orderId} {
-      allow read: if isAdmin();
-      allow create: if true; // Allow guest orders
-      allow update, delete: if isAdmin();
-    }
-
-    match /messages/{messageId} {
-      allow read: if isAdmin();
-      allow create: if true;
-      allow update, delete: if isAdmin();
+      allow read: if isOwner(userId) || isSiteAdmin();
+      allow create: if isAuthenticated() && isOwner(userId);
+      allow update: if isSiteAdmin() || isOwner(userId);
     }
 
     match /{path=**} {

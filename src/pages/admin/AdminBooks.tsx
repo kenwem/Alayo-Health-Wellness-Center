@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Edit, Trash2, Search, X, Save, ArrowLeft } from 'lucide-react';
+import { Plus, Edit, Trash2, Search, X, Save, ArrowLeft, Loader2 } from 'lucide-react';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { handleFirestoreError, OperationType } from '../../utils/firebaseErrors';
 import ImageUpload from '../../components/admin/ImageUpload';
+import { siteId } from '../../constants/siteConfig';
 
 interface Book {
   id: string;
@@ -13,38 +14,72 @@ interface Book {
   status: string;
   coverImage: string;
   preface: string;
+  position?: number;
 }
 
 export default function AdminBooks() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sortBy, setSortBy] = useState<'title' | 'price' | 'position'>('position');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
-    const q = query(collection(db, 'books'), orderBy('title', 'asc'));
+    const q = query(collection(db, 'sites', siteId, 'books'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const booksData = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Book[];
-      setBooks(booksData);
+      
+      // Sort client-side so documents without 'position' are still included
+      const sortedData = booksData.sort((a, b) => (a.position || 0) - (b.position || 0));
+      
+      setBooks(sortedData);
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, 'books');
+      handleFirestoreError(error, OperationType.LIST, `sites/${siteId}/books`);
     });
 
     return () => unsubscribe();
   }, []);
 
+  const filteredBooks = books.filter(book => 
+    book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    book.preface?.toLowerCase().includes(searchQuery.toLowerCase())
+  ).sort((a, b) => {
+    const order = sortOrder === 'asc' ? 1 : -1;
+    
+    if (sortBy === 'title') return a.title.localeCompare(b.title) * order;
+    if (sortBy === 'position') return ((a.position || 0) - (b.position || 0)) * order;
+    
+    if (sortBy === 'price') {
+      const getPrice = (p: Book) => parseFloat(p.price.replace('₦', '').replace(',', '')) || 0;
+      return (getPrice(a) - getPrice(b)) * order;
+    }
+    
+    return 0;
+  });
+
+  const totalPages = Math.ceil(filteredBooks.length / itemsPerPage);
+  const paginatedBooks = filteredBooks.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
   const [newBook, setNewBook] = useState({
     title: '',
     author: '',
     price: '',
     status: 'Draft',
     coverImage: '',
-    preface: ''
+    manualImageUrl: '',
+    preface: '',
+    position: 0
   });
 
   const handleDelete = (id: string) => {
@@ -54,10 +89,10 @@ export default function AdminBooks() {
   const confirmDelete = async () => {
     if (deleteConfirmId !== null) {
       try {
-        await deleteDoc(doc(db, 'books', deleteConfirmId));
+        await deleteDoc(doc(db, 'sites', siteId, 'books', deleteConfirmId));
         setDeleteConfirmId(null);
       } catch (error) {
-        handleFirestoreError(error, OperationType.DELETE, `books/${deleteConfirmId}`);
+        handleFirestoreError(error, OperationType.DELETE, `sites/${siteId}/books/${deleteConfirmId}`);
       }
     }
   };
@@ -70,34 +105,43 @@ export default function AdminBooks() {
       price: book.price.replace('₦', '').replace(',', ''),
       status: book.status,
       coverImage: book.coverImage,
-      preface: book.preface || ''
+      manualImageUrl: book.coverImage,
+      preface: book.preface || '',
+      position: book.position || 0
     });
     setIsAddModalOpen(true);
   };
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSaving(true);
     const formattedPrice = newBook.price.startsWith('₦') ? newBook.price : `₦${newBook.price}`;
     
+    const bookData = {
+      ...newBook,
+      price: formattedPrice,
+      coverImage: newBook.manualImageUrl || newBook.coverImage,
+    };
+
     try {
       if (editingId) {
-        await updateDoc(doc(db, 'books', editingId), {
-          ...newBook,
-          price: formattedPrice,
+        await updateDoc(doc(db, 'sites', siteId, 'books', editingId), {
+          ...bookData,
           updatedAt: serverTimestamp()
         });
       } else {
-        await addDoc(collection(db, 'books'), {
-          ...newBook,
-          price: formattedPrice,
+        await addDoc(collection(db, 'sites', siteId, 'books'), {
+          ...bookData,
           createdAt: serverTimestamp()
         });
       }
       setIsAddModalOpen(false);
       setEditingId(null);
-      setNewBook({ title: '', author: '', price: '', status: 'Draft', coverImage: '', preface: '' });
+      setNewBook({ title: '', author: '', price: '', status: 'Draft', coverImage: '', manualImageUrl: '', preface: '', position: 0 });
     } catch (error) {
-      handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, editingId ? `books/${editingId}` : 'books');
+      handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, editingId ? `sites/${siteId}/books/${editingId}` : `sites/${siteId}/books`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -108,7 +152,7 @@ export default function AdminBooks() {
         <button 
           onClick={() => {
             setEditingId(null);
-            setNewBook({ title: '', author: '', price: '', status: 'Draft', coverImage: '', preface: '' });
+            setNewBook({ title: '', author: '', price: '', status: 'Draft', coverImage: '', manualImageUrl: '', preface: '', position: 0 });
             setIsAddModalOpen(true);
           }}
           className="bg-lime-600 hover:bg-lime-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
@@ -119,20 +163,48 @@ export default function AdminBooks() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
-        <div className="p-4 border-b border-stone-200 flex justify-between items-center">
-          <div className="relative w-64">
+        <div className="p-4 border-b border-stone-200 flex flex-col sm:flex-row justify-between items-center gap-4">
+          <div className="relative w-full sm:w-64">
             <input
               type="text"
               placeholder="Search books..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-500"
             />
             <Search className="absolute left-3 top-2.5 text-stone-400" size={20} />
+          </div>
+          <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-stone-500">Sort by:</span>
+              <select 
+                value={sortBy} 
+                onChange={(e) => setSortBy(e.target.value as any)}
+                className="border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-lime-500"
+              >
+                <option value="position">Position</option>
+                <option value="title">Title</option>
+                <option value="price">Price</option>
+              </select>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-stone-500">Order:</span>
+              <select 
+                value={sortOrder} 
+                onChange={(e) => setSortOrder(e.target.value as 'asc' | 'desc')}
+                className="border border-stone-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-lime-500"
+              >
+                <option value="asc">Ascending</option>
+                <option value="desc">Descending</option>
+              </select>
+            </div>
           </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-left">
             <thead className="bg-stone-50 border-b border-stone-200">
               <tr>
+                <th className="px-6 py-4 text-sm font-semibold text-stone-600">Pos</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Cover</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Title</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Author</th>
@@ -142,8 +214,9 @@ export default function AdminBooks() {
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-200">
-              {books.map((book) => (
+              {paginatedBooks.map((book) => (
                 <tr key={book.id} className="hover:bg-stone-50">
+                  <td className="px-6 py-4 text-stone-400 text-xs font-mono">{book.position || 0}</td>
                   <td className="px-6 py-4">
                     {book.coverImage ? (
                       <img src={book.coverImage} alt={book.title} className="w-10 h-14 object-cover rounded-sm shadow-sm" referrerPolicy="no-referrer" />
@@ -171,6 +244,26 @@ export default function AdminBooks() {
             </tbody>
           </table>
         </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="p-4 border-t border-stone-200 flex justify-center items-center gap-4">
+            <button 
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              className="px-3 py-1 border border-stone-200 rounded-lg disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-stone-600">Page {currentPage} of {totalPages}</span>
+            <button 
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              className="px-3 py-1 border border-stone-200 rounded-lg disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Book Modal */}
@@ -185,6 +278,11 @@ export default function AdminBooks() {
             </div>
             <div className="overflow-y-auto p-6">
               <form id="bookForm" onSubmit={handleAddSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Display Position (Order)</label>
+                  <input type="number" value={newBook.position} onChange={e => setNewBook({...newBook, position: Number(e.target.value)})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" placeholder="0" />
+                  <p className="text-[10px] text-stone-500 mt-1">Lower numbers appear first.</p>
+                </div>
                 <div>
                   <label className="block text-sm font-medium text-stone-700 mb-1">Book Title</label>
                   <input required type="text" value={newBook.title} onChange={e => setNewBook({...newBook, title: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" />
@@ -210,9 +308,20 @@ export default function AdminBooks() {
                 <ImageUpload
                   label="Cover Image"
                   value={newBook.coverImage}
-                  onChange={(url) => setNewBook({...newBook, coverImage: url})}
+                  onChange={(url) => setNewBook({...newBook, coverImage: url, manualImageUrl: url})}
                   folder="books"
                 />
+
+                <div>
+                  <label className="block text-sm font-medium text-stone-700 mb-1">Or Image URL</label>
+                  <input 
+                    type="text" 
+                    value={newBook.manualImageUrl} 
+                    onChange={e => setNewBook({...newBook, manualImageUrl: e.target.value})} 
+                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" 
+                    placeholder="https://example.com/book-cover.jpg"
+                  />
+                </div>
 
                 <div>
                   <label className="block text-sm font-medium text-stone-700 mb-1">Short Preface</label>
@@ -222,7 +331,15 @@ export default function AdminBooks() {
             </div>
             <div className="p-6 border-t border-stone-100 flex justify-end gap-3 bg-stone-50">
               <button type="button" onClick={() => { setIsAddModalOpen(false); setEditingId(null); }} className="px-4 py-2 text-stone-600 hover:bg-stone-200 rounded-lg transition-colors">Cancel</button>
-              <button type="submit" form="bookForm" className="px-4 py-2 bg-lime-600 hover:bg-lime-700 text-white rounded-lg transition-colors">Save Book</button>
+              <button 
+                type="submit" 
+                form="bookForm" 
+                disabled={isSaving}
+                className="px-4 py-2 bg-lime-600 hover:bg-lime-700 text-white rounded-lg transition-colors disabled:bg-stone-400 flex items-center gap-2"
+              >
+                {isSaving && <Loader2 className="animate-spin" size={18} />}
+                {isSaving ? 'Saving...' : 'Save Book'}
+              </button>
             </div>
           </div>
         </div>

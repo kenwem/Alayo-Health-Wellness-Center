@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, Loader2, UserPlus } from 'lucide-react';
+import { Lock, Mail, ArrowRight, Loader2, UserPlus, Eye, EyeOff } from 'lucide-react';
 import { signInWithEmailAndPassword, sendPasswordResetEmail, createUserWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase';
 
@@ -12,6 +12,7 @@ export default function AdminLogin() {
   const [resetSent, setResetSent] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -24,7 +25,11 @@ export default function AdminLogin() {
     } catch (err: any) {
       console.error('Login error:', err);
       if (err.code === 'auth/network-request-failed') {
-        setError('Network Error: Unable to reach authentication servers. This usually happens if the domain is not authorized in Firebase Console or if your connection is blocked by a firewall/VPN.');
+        setError(`Network Error: Unable to reach authentication servers. 
+        
+        IMPORTANT: Please ensure the current domain (${window.location.hostname}) is added to your Authorized Domains in the Firebase Console (Authentication > Settings > Authorized Domains). 
+        
+        If you have already added it, check if your internet connection is stable or if a VPN/Firewall is blocking the request.`);
       } else if (err.code === 'auth/invalid-credential') {
         setError('Invalid email or password. Please try again.');
       } else {
@@ -128,13 +133,20 @@ export default function AdminLogin() {
                     <Lock size={20} className="text-stone-400" />
                   </div>
                   <input
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-4 py-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-lime-500 focus:border-lime-500 outline-none transition-all"
+                    className="w-full pl-10 pr-12 py-3 border border-stone-200 rounded-xl focus:ring-2 focus:ring-lime-500 focus:border-lime-500 outline-none transition-all"
                     placeholder="••••••••"
                     required
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-stone-400 hover:text-stone-600 transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
                 </div>
               </div>
               

@@ -4,6 +4,7 @@ import { doc, setDoc, getDocFromServer } from 'firebase/firestore';
 import { db } from '../../firebase';
 import ImageUpload from '../../components/admin/ImageUpload';
 import { useSiteSettings, SiteSettings } from '../../hooks/useSiteSettings';
+import { siteId } from '../../constants/siteConfig';
 
 export default function AdminSettings() {
   const { settings: initialSettings, loading: initialLoading } = useSiteSettings();
@@ -42,7 +43,7 @@ export default function AdminSettings() {
       
       // Test connection first with a shorter timeout
       try {
-        await getDocFromServer(doc(db, 'settings', 'site'));
+        await getDocFromServer(doc(db, 'sites', siteId, 'settings', 'site'));
         console.log('Connection test successful');
       } catch (connErr: any) {
         console.warn('Connection test failed or slow:', connErr);
@@ -53,13 +54,13 @@ export default function AdminSettings() {
 
       if (isTimedOut) throw new Error('Save operation timed out. Please check your connection.');
 
-      await setDoc(doc(db, 'settings', 'site'), settings);
+      await setDoc(doc(db, 'sites', siteId, 'settings', 'site'), settings);
       console.log('Firestore setDoc successful');
 
       clearTimeout(timeoutId);
 
       // Update cache immediately for responsiveness
-      localStorage.setItem('site_settings_cache', JSON.stringify(settings));
+      localStorage.setItem(`site_settings_cache_${siteId}`, JSON.stringify(settings));
       isDirtyRef.current = false;
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
@@ -102,48 +103,118 @@ export default function AdminSettings() {
             className="bg-lime-600 hover:bg-lime-700 text-white px-6 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors shadow-sm disabled:bg-stone-400"
           >
             {saving ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
-            {success ? 'Saved!' : 'Save Changes'}
+            {success ? 'Saved!' : (saving ? 'Saving...' : 'Save Changes')}
           </button>
         </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <ImageUpload
-          label="Website Logo"
-          value={settings.logoUrl}
-          onChange={(url) => updateSettings({ logoUrl: url })}
-          folder="site"
-        />
-        <ImageUpload
-          label="Hero Background"
-          value={settings.heroBgUrl}
-          onChange={(url) => updateSettings({ heroBgUrl: url })}
-          folder="site"
-        />
-        <ImageUpload
-          label="About Page Background"
-          value={settings.aboutBgUrl}
-          onChange={(url) => updateSettings({ aboutBgUrl: url })}
-          folder="site"
-        />
-        <ImageUpload
-          label="Services Page Background"
-          value={settings.servicesBgUrl}
-          onChange={(url) => updateSettings({ servicesBgUrl: url })}
-          folder="site"
-        />
-        <ImageUpload
-          label="Editorial Page Background"
-          value={settings.blogBgUrl}
-          onChange={(url) => updateSettings({ blogBgUrl: url })}
-          folder="site"
-        />
-        <ImageUpload
-          label="CEO & Chief Consultant Photo"
-          value={settings.ceoPhotoUrl}
-          onChange={(url) => updateSettings({ ceoPhotoUrl: url })}
-          folder="profiles"
-        />
+        <div className="space-y-4 md:col-span-2">
+          <label className="block text-sm font-bold text-stone-700">Website Name</label>
+          <input 
+            type="text" 
+            value={settings.siteName} 
+            onChange={e => updateSettings({ siteName: e.target.value })} 
+            className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:ring-2 focus:ring-lime-500 focus:outline-none text-lg font-medium" 
+            placeholder="Enter Website Name (e.g. Alayo Health & Wellness)"
+          />
+        </div>
+
+        <div className="space-y-4">
+          <ImageUpload
+            label="Website Logo"
+            value={settings.logoUrl}
+            onChange={(url) => updateSettings({ logoUrl: url })}
+            folder="site"
+          />
+          <input 
+            type="text" 
+            value={settings.logoUrl} 
+            onChange={e => updateSettings({ logoUrl: e.target.value })} 
+            className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm" 
+            placeholder="Or enter Logo URL..."
+          />
+        </div>
+
+        <div className="space-y-4">
+          <ImageUpload
+            label="Hero Background"
+            value={settings.heroBgUrl}
+            onChange={(url) => updateSettings({ heroBgUrl: url })}
+            folder="site"
+          />
+          <input 
+            type="text" 
+            value={settings.heroBgUrl} 
+            onChange={e => updateSettings({ heroBgUrl: e.target.value })} 
+            className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm" 
+            placeholder="Or enter Hero BG URL..."
+          />
+        </div>
+
+        <div className="space-y-4">
+          <ImageUpload
+            label="About Page Background"
+            value={settings.aboutBgUrl}
+            onChange={(url) => updateSettings({ aboutBgUrl: url })}
+            folder="site"
+          />
+          <input 
+            type="text" 
+            value={settings.aboutBgUrl} 
+            onChange={e => updateSettings({ aboutBgUrl: e.target.value })} 
+            className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm" 
+            placeholder="Or enter About BG URL..."
+          />
+        </div>
+
+        <div className="space-y-4">
+          <ImageUpload
+            label="Services Page Background"
+            value={settings.servicesBgUrl}
+            onChange={(url) => updateSettings({ servicesBgUrl: url })}
+            folder="site"
+          />
+          <input 
+            type="text" 
+            value={settings.servicesBgUrl} 
+            onChange={e => updateSettings({ servicesBgUrl: e.target.value })} 
+            className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm" 
+            placeholder="Or enter Services BG URL..."
+          />
+        </div>
+
+        <div className="space-y-4">
+          <ImageUpload
+            label="Editorial Page Background"
+            value={settings.blogBgUrl}
+            onChange={(url) => updateSettings({ blogBgUrl: url })}
+            folder="site"
+          />
+          <input 
+            type="text" 
+            value={settings.blogBgUrl} 
+            onChange={e => updateSettings({ blogBgUrl: e.target.value })} 
+            className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm" 
+            placeholder="Or enter Editorial BG URL..."
+          />
+        </div>
+
+        <div className="space-y-4">
+          <ImageUpload
+            label="CEO & Chief Consultant Photo"
+            value={settings.ceoPhotoUrl}
+            onChange={(url) => updateSettings({ ceoPhotoUrl: url })}
+            folder="profiles"
+          />
+          <input 
+            type="text" 
+            value={settings.ceoPhotoUrl} 
+            onChange={e => updateSettings({ ceoPhotoUrl: e.target.value })} 
+            className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none text-sm" 
+            placeholder="Or enter CEO Photo URL..."
+          />
+        </div>
       </div>
     </div>
   );
