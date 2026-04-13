@@ -10,10 +10,17 @@ import {
   doc,
   deleteDoc
 } from 'firebase/firestore';
-import { signInWithPopup, GoogleAuthProvider, signOut } from 'firebase/auth';
+import { 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  signOut,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  updateProfile
+} from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { siteId, isAdmin } from '../constants/siteConfig';
-import { MessageSquare, Send, Trash2, LogIn, LogOut, User as UserIcon, CornerDownRight } from 'lucide-react';
+import { MessageSquare, Send, Trash2, LogIn, LogOut, User as UserIcon, CornerDownRight, X, Mail, Lock, UserPlus, Loader2, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface Comment {
@@ -51,6 +58,14 @@ export default function CommentSection({ collectionName, docId }: CommentSection
   const [replyText, setReplyText] = useState('');
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(auth.currentUser);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
     const unsubscribeAuth = auth.onAuthStateChanged((u) => {
@@ -97,12 +112,43 @@ export default function CommentSection({ collectionName, docId }: CommentSection
     };
   }, [collectionName, docId]);
 
-  const handleSignIn = async () => {
+  const handleGoogleSignIn = async () => {
     const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
     try {
+      setAuthLoading(true);
       await signInWithPopup(auth, provider);
-    } catch (error) {
+      setShowAuthModal(false);
+    } catch (error: any) {
       console.error('Error signing in:', error);
+      setAuthError(error.message);
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleEmailAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError('');
+    setAuthLoading(true);
+    try {
+      if (authMode === 'signup') {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        if (displayName) {
+          await updateProfile(userCredential.user, { displayName });
+        }
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+      setShowAuthModal(false);
+      setEmail('');
+      setPassword('');
+      setDisplayName('');
+    } catch (error: any) {
+      console.error('Auth error:', error);
+      setAuthError(error.message);
+    } finally {
+      setAuthLoading(false);
     }
   };
 
@@ -181,7 +227,7 @@ export default function CommentSection({ collectionName, docId }: CommentSection
         </h3>
         {!user ? (
           <button 
-            onClick={handleSignIn}
+            onClick={() => setShowAuthModal(true)}
             className="flex items-center gap-2 bg-stone-900 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-stone-800 transition-all"
           >
             <LogIn size={16} /> Sign in to comment
@@ -257,6 +303,11 @@ export default function CommentSection({ collectionName, docId }: CommentSection
                         {isAdmin(comment.userEmail) && (
                           <span className="bg-lime-100 text-lime-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
                             Admin
+                          </span>
+                        )}
+                        {comment.status === 'pending' && (
+                          <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                            Pending Approval
                           </span>
                         )}
                       </div>
@@ -378,6 +429,137 @@ export default function CommentSection({ collectionName, docId }: CommentSection
           ))
         )}
       </div>
+
+      {/* Auth Modal */}
+      <AnimatePresence>
+        {showAuthModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAuthModal(false)}
+              className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="bg-stone-900 p-6 text-center relative">
+                <button 
+                  onClick={() => setShowAuthModal(false)}
+                  className="absolute top-4 right-4 text-stone-400 hover:text-white transition-colors"
+                >
+                  <X size={20} />
+                </button>
+                <h4 className="text-xl font-bold text-white mb-1">
+                  {authMode === 'login' ? 'Welcome Back' : 'Join the Community'}
+                </h4>
+                <p className="text-lime-500 text-xs font-medium uppercase tracking-wider">
+                  {authMode === 'login' ? 'Sign in to share your thoughts' : 'Create an account to comment'}
+                </p>
+              </div>
+
+              <div className="p-8">
+                {authError && (
+                  <div className="bg-red-50 text-red-600 p-3 rounded-xl mb-6 text-xs border border-red-100">
+                    {authError}
+                  </div>
+                )}
+
+                <form onSubmit={handleEmailAuth} className="space-y-4">
+                  {authMode === 'signup' && (
+                    <div>
+                      <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2 ml-1">Display Name</label>
+                      <input
+                        type="text"
+                        value={displayName}
+                        onChange={(e) => setDisplayName(e.target.value)}
+                        className="w-full px-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-lime-500 outline-none transition-all text-sm"
+                        placeholder="Your Name"
+                        required
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2 ml-1">Email Address</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-lime-500 outline-none transition-all text-sm"
+                        placeholder="email@example.com"
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-stone-500 uppercase tracking-wider mb-2 ml-1">Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" size={18} />
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        className="w-full pl-10 pr-12 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-lime-500 outline-none transition-all text-sm"
+                        placeholder="••••••••"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600"
+                      >
+                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={authLoading}
+                    className="w-full bg-lime-500 hover:bg-lime-600 disabled:bg-stone-300 text-white font-bold py-3 rounded-xl transition-all shadow-lg shadow-lime-500/20 flex items-center justify-center gap-2"
+                  >
+                    {authLoading ? <Loader2 className="animate-spin" size={18} /> : (authMode === 'login' ? 'Sign In' : 'Sign Up')}
+                  </button>
+                </form>
+
+                <div className="relative my-8">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-stone-100"></div>
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-white px-2 text-stone-400 font-medium">Or continue with</span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={handleGoogleSignIn}
+                  disabled={authLoading}
+                  className="w-full bg-white border border-stone-200 hover:bg-stone-50 text-stone-700 font-bold py-3 rounded-xl transition-all flex items-center justify-center gap-3 shadow-sm"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
+                  Sign in with Google
+                </button>
+
+                <p className="text-center mt-8 text-sm text-stone-500">
+                  {authMode === 'login' ? "Don't have an account?" : "Already have an account?"}{' '}
+                  <button 
+                    onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                    className="text-lime-600 font-bold hover:underline"
+                  >
+                    {authMode === 'login' ? 'Sign Up' : 'Sign In'}
+                  </button>
+                </p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
