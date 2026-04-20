@@ -1,10 +1,15 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Menu, X, Leaf } from 'lucide-react';
+import { Menu, X, Leaf, LayoutDashboard } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useSiteSettings } from '../hooks/useSiteSettings';
+import { User } from 'firebase/auth';
 
-export default function Navbar() {
+interface NavbarProps {
+  user: User | null;
+}
+
+export default function Navbar({ user }: NavbarProps) {
   const [isOpen, setIsOpen] = useState(false);
   const location = useLocation();
   const { settings } = useSiteSettings();
@@ -14,6 +19,8 @@ export default function Navbar() {
     { name: 'About', path: '/about' },
     { name: 'Services', path: '/services' },
     { name: 'Products', path: '/products' },
+    { name: 'Testimonials', path: '/testimonials' },
+    { name: 'Research', path: '/research' },
     { name: 'Editorial', path: '/blog' },
     { name: 'Contact', path: '/contact' },
   ];
@@ -57,16 +64,6 @@ export default function Navbar() {
                 {link.name}
               </Link>
             ))}
-            <motion.a
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              href="https://wa.me/2348034170747"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="bg-lime-500 hover:bg-lime-600 text-white px-5 py-2.5 rounded-full text-sm font-medium transition-colors shadow-sm"
-            >
-              Book Consultation
-            </motion.a>
           </div>
 
           {/* Mobile Menu Button */}
@@ -103,14 +100,6 @@ export default function Navbar() {
                 {link.name}
               </Link>
             ))}
-            <a
-              href="https://wa.me/2348034170747"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block w-full text-center mt-4 bg-lime-500 hover:bg-lime-600 text-white px-5 py-3 rounded-md text-base font-medium transition-colors shadow-sm"
-            >
-              Book Consultation
-            </a>
           </div>
         </motion.div>
       )}

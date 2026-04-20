@@ -1,9 +1,31 @@
-import { ShieldCheck, GraduationCap, BookOpen, Award } from 'lucide-react';
+import { ShieldCheck, GraduationCap, BookOpen, Award, Leaf, Heart, Star, Quote } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { useSiteSettings } from '../hooks/useSiteSettings';
+import { useState, useEffect } from 'react';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { db } from '../firebase';
+import { siteId } from '../constants/siteConfig';
+
+interface Testimonial {
+  id: string;
+  text: string;
+  author: string;
+  location: string;
+}
 
 export default function About() {
   const { settings } = useSiteSettings();
+  const navigate = useNavigate();
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+
+  useEffect(() => {
+    const q = query(collection(db, 'sites', siteId, 'testimonials'), orderBy('position', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      setTestimonials(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Testimonial)));
+    });
+    return () => unsubscribe();
+  }, []);
 
   return (
     <motion.div 
@@ -64,33 +86,22 @@ export default function About() {
               <div className="bg-white p-8 rounded-3xl shadow-sm border border-stone-100">
                 <h4 className="text-lg font-bold text-stone-900 mb-6 border-b border-stone-100 pb-4">Quick Facts</h4>
                 <ul className="space-y-6">
-                  <li className="flex items-start gap-4">
-                    <div className="bg-lime-100 p-2 rounded-lg text-lime-600 shrink-0">
-                      <ShieldCheck size={20} />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-stone-900">Established 1993</p>
-                      <p className="text-sm text-stone-600">Over 30 years of clinical practice</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-4">
-                    <div className="bg-lime-100 p-2 rounded-lg text-lime-600 shrink-0">
-                      <GraduationCap size={20} />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-stone-900">Academic Leader</p>
-                      <p className="text-sm text-stone-600">Former Dean, School of Natural Medicine</p>
-                    </div>
-                  </li>
-                  <li className="flex items-start gap-4">
-                    <div className="bg-lime-100 p-2 rounded-lg text-lime-600 shrink-0">
-                      <Award size={20} />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-stone-900">National President</p>
-                      <p className="text-sm text-stone-600">Academy of Complementary and Alternative Medical Practitioners</p>
-                    </div>
-                  </li>
+                  {settings.aboutFacts.map((fact, idx) => (
+                    <li key={idx} className="flex items-start gap-4">
+                      <div className="bg-lime-100 p-2 rounded-lg text-lime-600 shrink-0">
+                        {fact.icon === 'ShieldCheck' && <ShieldCheck size={20} />}
+                        {fact.icon === 'GraduationCap' && <GraduationCap size={20} />}
+                        {fact.icon === 'Award' && <Award size={20} />}
+                        {fact.icon === 'Leaf' && <Leaf size={20} />}
+                        {fact.icon === 'Heart' && <Heart size={20} />}
+                        {fact.icon === 'BookOpen' && <BookOpen size={20} />}
+                      </div>
+                      <div>
+                        <p className="font-semibold text-stone-900">{fact.title}</p>
+                        <p className="text-sm text-stone-600">{fact.desc}</p>
+                      </div>
+                    </li>
+                  ))}
                 </ul>
               </div>
             </motion.div>
@@ -138,7 +149,11 @@ export default function About() {
                 </p>
                 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-8">
-                  <motion.div whileHover={{ y: -5 }} className="flex items-start gap-4 bg-white p-6 rounded-2xl border border-stone-100 shadow-sm">
+                  <motion.div 
+                    whileHover={{ y: -5 }} 
+                    onClick={() => navigate('/research')}
+                    className="flex items-start gap-4 bg-white p-6 rounded-2xl border border-stone-100 shadow-sm cursor-pointer hover:border-lime-200 transition-colors"
+                  >
                     <div className="bg-lime-100 p-3 rounded-lg text-lime-600 shrink-0">
                       <BookOpen size={24} />
                     </div>
@@ -147,7 +162,11 @@ export default function About() {
                       <p className="text-sm text-stone-500 font-medium">Published 2018</p>
                     </div>
                   </motion.div>
-                  <motion.div whileHover={{ y: -5 }} className="flex items-start gap-4 bg-white p-6 rounded-2xl border border-stone-100 shadow-sm">
+                  <motion.div 
+                    whileHover={{ y: -5 }} 
+                    onClick={() => navigate('/research')}
+                    className="flex items-start gap-4 bg-white p-6 rounded-2xl border border-stone-100 shadow-sm cursor-pointer hover:border-lime-200 transition-colors"
+                  >
                     <div className="bg-lime-100 p-3 rounded-lg text-lime-600 shrink-0">
                       <BookOpen size={24} />
                     </div>
@@ -167,6 +186,56 @@ export default function About() {
           </div>
         </div>
       </section>
+
+      {/* Testimonials Section */}
+      {testimonials.length > 0 && (
+        <section className="py-24 bg-stone-900 text-white overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center mb-16">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-lime-500/10 text-lime-400 border border-lime-500/20 mb-4"
+              >
+                <Star size={16} className="fill-lime-400" />
+                <span className="text-sm font-bold uppercase tracking-wider">Patient Testimonials</span>
+              </motion.div>
+              <h2 className="text-3xl md:text-4xl font-bold mb-4">Healing Journeys</h2>
+              <p className="text-stone-400 max-w-2xl mx-auto">
+                Real stories of transformation and wellness from those who have experienced our holistic care.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {testimonials.map((t, idx) => (
+                <motion.div
+                  key={t.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: idx * 0.1 }}
+                  className="bg-stone-800/50 p-8 rounded-3xl border border-stone-700/50 relative group hover:border-lime-500/30 transition-colors"
+                >
+                  <Quote className="absolute top-6 right-8 text-stone-700 group-hover:text-lime-500/20 transition-colors" size={48} />
+                  <p className="text-stone-300 leading-relaxed mb-8 relative z-10 italic">
+                    "{t.text}"
+                  </p>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-full bg-stone-700 flex items-center justify-center text-lime-500 font-bold text-xl">
+                      {t.author.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-white">{t.author}</h4>
+                      <p className="text-sm text-stone-500">{t.location}</p>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
     </motion.div>
   );
 }

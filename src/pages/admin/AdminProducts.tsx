@@ -3,16 +3,16 @@ import { Plus, Edit, Trash2, Search, X, Save, Loader2 } from 'lucide-react';
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { db } from '../../firebase';
 import ImageUpload from '../../components/admin/ImageUpload';
+import Pagination from '../../components/Pagination';
 import { handleFirestoreError, OperationType } from '../../utils/firebaseErrors';
 import { siteId } from '../../constants/siteConfig';
 
 interface Product {
   id: string;
   name: string;
-  category: string;
   price: string;
   salePrice: string;
-  stock: number;
+  stock?: number;
   imageUrl: string;
   shortDescription: string;
   position?: number;
@@ -49,13 +49,12 @@ export default function AdminProducts() {
 
   const filteredProducts = products.filter(product => 
     product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
     product.shortDescription?.toLowerCase().includes(searchQuery.toLowerCase())
   ).sort((a, b) => {
     const order = sortOrder === 'asc' ? 1 : -1;
     
     if (sortBy === 'name') return a.name.localeCompare(b.name) * order;
-    if (sortBy === 'stock') return (a.stock - b.stock) * order;
+    if (sortBy === 'stock') return ((a.stock || 0) - (b.stock || 0)) * order;
     if (sortBy === 'position') return ((a.position || 0) - (b.position || 0)) * order;
     
     if (sortBy === 'price') {
@@ -78,7 +77,6 @@ export default function AdminProducts() {
   const [isSaving, setIsSaving] = useState(false);
   const [newProduct, setNewProduct] = useState({
     name: '',
-    category: '',
     price: '',
     salePrice: '',
     stock: '',
@@ -107,10 +105,9 @@ export default function AdminProducts() {
     setEditingId(product.id);
     setNewProduct({
       name: product.name,
-      category: product.category,
       price: product.price.replace('₦', '').replace(',', ''),
       salePrice: product.salePrice ? product.salePrice.replace('₦', '').replace(',', '') : '',
-      stock: product.stock.toString(),
+      stock: product.stock?.toString() || '',
       imageUrl: product.imageUrl,
       manualImageUrl: product.imageUrl,
       shortDescription: product.shortDescription || '',
@@ -127,10 +124,9 @@ export default function AdminProducts() {
     
     const productData = {
       name: newProduct.name,
-      category: newProduct.category,
       price: formattedPrice,
       salePrice: formattedSalePrice,
-      stock: Number(newProduct.stock),
+      stock: newProduct.stock !== '' ? Number(newProduct.stock) : null,
       imageUrl: newProduct.manualImageUrl || newProduct.imageUrl,
       shortDescription: newProduct.shortDescription,
       position: Number(newProduct.position) || 0
@@ -148,7 +144,7 @@ export default function AdminProducts() {
       }
       setIsAddModalOpen(false);
       setEditingId(null);
-      setNewProduct({ name: '', category: '', price: '', salePrice: '', stock: '', imageUrl: '', manualImageUrl: '', shortDescription: '', position: 0 });
+      setNewProduct({ name: '', price: '', salePrice: '', stock: '', imageUrl: '', manualImageUrl: '', shortDescription: '', position: 0 });
     } catch (error) {
       console.error('Error saving product:', error);
       handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, editingId ? `sites/${siteId}/products/${editingId}` : `sites/${siteId}/products`);
@@ -164,7 +160,7 @@ export default function AdminProducts() {
         <button 
           onClick={() => {
             setEditingId(null);
-            setNewProduct({ name: '', category: '', price: '', salePrice: '', stock: '', imageUrl: '', manualImageUrl: '', shortDescription: '', position: 0 });
+            setNewProduct({ name: '', price: '', salePrice: '', stock: '', imageUrl: '', manualImageUrl: '', shortDescription: '', position: 0 });
             setIsAddModalOpen(true);
           }}
           className="bg-lime-600 hover:bg-lime-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
@@ -220,7 +216,6 @@ export default function AdminProducts() {
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Pos</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Image</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Product Name</th>
-                <th className="px-6 py-4 text-sm font-semibold text-stone-600">Category</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Price</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Stock</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600 text-right">Actions</th>
@@ -232,7 +227,9 @@ export default function AdminProducts() {
                   <td className="px-6 py-4 text-stone-400 text-xs font-mono">{product.position || 0}</td>
                   <td className="px-6 py-4">
                     {product.imageUrl ? (
-                      <img src={product.imageUrl} alt={product.name} className="w-12 h-12 object-cover rounded-md" referrerPolicy="no-referrer" />
+                      <div className="w-12 h-12 bg-white border border-stone-100 rounded-md overflow-hidden">
+                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                      </div>
                     ) : (
                       <div className="w-12 h-12 bg-stone-200 rounded-md flex items-center justify-center text-stone-400 text-xs">No Img</div>
                     )}
@@ -241,7 +238,6 @@ export default function AdminProducts() {
                     <div>{product.name}</div>
                     {product.shortDescription && <div className="text-xs text-stone-500 font-normal mt-1 truncate max-w-xs">{product.shortDescription}</div>}
                   </td>
-                  <td className="px-6 py-4 text-stone-600">{product.category}</td>
                   <td className="px-6 py-4 text-stone-600">
                     {product.salePrice ? (
                       <div>
@@ -262,26 +258,14 @@ export default function AdminProducts() {
             </tbody>
           </table>
         </div>
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="p-4 border-t border-stone-200 flex justify-center items-center gap-4">
-            <button 
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              className="px-3 py-1 border border-stone-200 rounded-lg disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span className="text-sm text-stone-600">Page {currentPage} of {totalPages}</span>
-            <button 
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              className="px-3 py-1 border border-stone-200 rounded-lg disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
-        )}
+        
+        <div className="p-4 border-t border-stone-200">
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </div>
 
       {/* Add/Edit Product Modal */}
@@ -309,10 +293,6 @@ export default function AdminProducts() {
                   <label className="block text-sm font-medium text-stone-700 mb-1">Short Description</label>
                   <textarea rows={2} value={newProduct.shortDescription} onChange={e => setNewProduct({...newProduct, shortDescription: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" placeholder="Brief description of the product..." />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">Category</label>
-                  <input required type="text" value={newProduct.category} onChange={e => setNewProduct({...newProduct, category: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" />
-                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-stone-700 mb-1">Price (₦)</label>
@@ -325,26 +305,16 @@ export default function AdminProducts() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-stone-700 mb-1">Stock Quantity</label>
-                  <input required type="number" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" />
+                  <input type="number" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" />
                 </div>
                 
                 <ImageUpload
-                  label="Product Image"
+                  label="Product Image (1:1 recommended)"
                   value={newProduct.imageUrl}
-                  onChange={(url) => setNewProduct({...newProduct, imageUrl: url, manualImageUrl: url})}
+                  onChange={(url) => setNewProduct({...newProduct, imageUrl: url})}
                   folder="products"
+                  aspect={1}
                 />
-
-                <div>
-                  <label className="block text-sm font-medium text-stone-700 mb-1">Or Image URL</label>
-                  <input 
-                    type="text" 
-                    value={newProduct.manualImageUrl} 
-                    onChange={e => setNewProduct({...newProduct, manualImageUrl: e.target.value})} 
-                    className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" 
-                    placeholder="https://example.com/product.jpg"
-                  />
-                </div>
               </form>
             </div>
             <div className="p-6 border-t border-stone-100 flex justify-end gap-3 bg-stone-50">

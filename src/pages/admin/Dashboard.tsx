@@ -1,4 +1,4 @@
-import { Users, Calendar, ShoppingBag, FileText, Package, BookOpen, MessageSquare } from 'lucide-react';
+import { Users, Calendar, ShoppingBag, FileText, Package, BookOpen, MessageSquare, Star } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../../firebase';
@@ -11,7 +11,8 @@ export default function Dashboard() {
     messages: 0,
     products: 0,
     books: 0,
-    editorial: 0
+    editorial: 0,
+    testimonials: 0
   });
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export default function Dashboard() {
       onSnapshot(collection(db, 'sites', siteId, 'products'), (s) => setCounts(prev => ({ ...prev, products: s.size }))),
       onSnapshot(collection(db, 'sites', siteId, 'books'), (s) => setCounts(prev => ({ ...prev, books: s.size }))),
       onSnapshot(collection(db, 'sites', siteId, 'editorial'), (s) => setCounts(prev => ({ ...prev, editorial: s.size }))),
+      onSnapshot(collection(db, 'sites', siteId, 'testimonials'), (s) => setCounts(prev => ({ ...prev, testimonials: s.size }))),
     ];
     return () => unsubscribers.forEach(unsub => unsub());
   }, []);
@@ -33,6 +35,7 @@ export default function Dashboard() {
     { label: 'Active Products', value: counts.products.toString(), icon: <Package size={24} />, color: 'bg-indigo-500' },
     { label: 'Published Books', value: counts.books.toString(), icon: <BookOpen size={24} />, color: 'bg-emerald-500' },
     { label: 'Editorial Articles', value: counts.editorial.toString(), icon: <FileText size={24} />, color: 'bg-purple-500' },
+    { label: 'Testimonials', value: counts.testimonials.toString(), icon: <Star size={24} />, color: 'bg-amber-500' },
   ];
 
   return (

@@ -120,12 +120,116 @@ export default function AdminSettings() {
           />
         </div>
 
+        <div className="space-y-4 md:col-span-2">
+          <label className="block text-sm font-bold text-stone-700">Hero Section Title</label>
+          <input 
+            type="text" 
+            value={settings.heroTitle} 
+            onChange={e => updateSettings({ heroTitle: e.target.value })} 
+            className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:ring-2 focus:ring-lime-500 focus:outline-none" 
+            placeholder="Main hero title..."
+          />
+        </div>
+
+        <div className="space-y-4 md:col-span-2">
+          <label className="block text-sm font-bold text-stone-700">Hero Section Subtitle</label>
+          <textarea 
+            rows={3}
+            value={settings.heroSubtitle} 
+            onChange={e => updateSettings({ heroSubtitle: e.target.value })} 
+            className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:ring-2 focus:ring-lime-500 focus:outline-none" 
+            placeholder="Hero subtitle text..."
+          />
+        </div>
+
+        <div className="space-y-4 md:col-span-2">
+          <label className="block text-sm font-bold text-stone-700">Footer Copyright Text</label>
+          <input 
+            type="text" 
+            value={settings.copyrightText} 
+            onChange={e => updateSettings({ copyrightText: e.target.value })} 
+            className="w-full px-4 py-3 border border-stone-300 rounded-xl focus:ring-2 focus:ring-lime-500 focus:outline-none" 
+            placeholder="© 2025 Alayo Health..."
+          />
+        </div>
+
+        <div className="space-y-4 md:col-span-2">
+          <label className="block text-sm font-bold text-stone-700">About Page - Quick Facts</label>
+          <div className="space-y-4">
+            {settings.aboutFacts.map((fact, index) => (
+              <div key={index} className="flex flex-col sm:flex-row gap-4 p-4 border border-stone-200 rounded-xl bg-stone-50">
+                <div className="flex-1 space-y-2">
+                  <input 
+                    type="text" 
+                    value={fact.title} 
+                    onChange={e => {
+                      const newFacts = [...settings.aboutFacts];
+                      newFacts[index].title = e.target.value;
+                      updateSettings({ aboutFacts: newFacts });
+                    }} 
+                    className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm" 
+                    placeholder="Fact Title (e.g. Established 1993)"
+                  />
+                  <input 
+                    type="text" 
+                    value={fact.desc} 
+                    onChange={e => {
+                      const newFacts = [...settings.aboutFacts];
+                      newFacts[index].desc = e.target.value;
+                      updateSettings({ aboutFacts: newFacts });
+                    }} 
+                    className="w-full px-3 py-2 border border-stone-300 rounded-lg text-sm" 
+                    placeholder="Fact Description"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <select 
+                    value={fact.icon}
+                    onChange={e => {
+                      const newFacts = [...settings.aboutFacts];
+                      newFacts[index].icon = e.target.value;
+                      updateSettings({ aboutFacts: newFacts });
+                    }}
+                    className="px-3 py-2 border border-stone-300 rounded-lg text-sm bg-white"
+                  >
+                    <option value="ShieldCheck">Shield</option>
+                    <option value="GraduationCap">Cap</option>
+                    <option value="Award">Award</option>
+                    <option value="Leaf">Leaf</option>
+                    <option value="Heart">Heart</option>
+                    <option value="BookOpen">Book</option>
+                  </select>
+                  <button 
+                    onClick={() => {
+                      const newFacts = settings.aboutFacts.filter((_, i) => i !== index);
+                      updateSettings({ aboutFacts: newFacts });
+                    }}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            ))}
+            <button 
+              onClick={() => {
+                const newFacts = [...settings.aboutFacts, { icon: 'ShieldCheck', title: '', desc: '' }];
+                updateSettings({ aboutFacts: newFacts });
+              }}
+              className="w-full py-3 border-2 border-dashed border-stone-300 rounded-xl text-stone-500 hover:text-stone-700 hover:border-stone-400 font-medium transition-all"
+            >
+              + Add Quick Fact
+            </button>
+          </div>
+        </div>
+
         <div className="space-y-4">
           <ImageUpload
-            label="Website Logo"
+            label="Website Logo (1:1 recommended)"
             value={settings.logoUrl}
             onChange={(url) => updateSettings({ logoUrl: url })}
             folder="site"
+            aspect={1}
           />
           <input 
             type="text" 
@@ -138,10 +242,11 @@ export default function AdminSettings() {
 
         <div className="space-y-4">
           <ImageUpload
-            label="Hero Background"
+            label="Hero Background (16:9 recommended)"
             value={settings.heroBgUrl}
             onChange={(url) => updateSettings({ heroBgUrl: url })}
             folder="site"
+            aspect={16/9}
           />
           <input 
             type="text" 
@@ -154,10 +259,11 @@ export default function AdminSettings() {
 
         <div className="space-y-4">
           <ImageUpload
-            label="About Page Background"
+            label="About Page Background (16:9 recommended)"
             value={settings.aboutBgUrl}
             onChange={(url) => updateSettings({ aboutBgUrl: url })}
             folder="site"
+            aspect={16/9}
           />
           <input 
             type="text" 
@@ -170,10 +276,11 @@ export default function AdminSettings() {
 
         <div className="space-y-4">
           <ImageUpload
-            label="Services Page Background"
+            label="Services Page Background (16:9 recommended)"
             value={settings.servicesBgUrl}
             onChange={(url) => updateSettings({ servicesBgUrl: url })}
             folder="site"
+            aspect={16/9}
           />
           <input 
             type="text" 
@@ -186,10 +293,11 @@ export default function AdminSettings() {
 
         <div className="space-y-4">
           <ImageUpload
-            label="Editorial Page Background"
+            label="Editorial Page Background (16:9 recommended)"
             value={settings.blogBgUrl}
             onChange={(url) => updateSettings({ blogBgUrl: url })}
             folder="site"
+            aspect={16/9}
           />
           <input 
             type="text" 
@@ -202,10 +310,11 @@ export default function AdminSettings() {
 
         <div className="space-y-4">
           <ImageUpload
-            label="CEO & Chief Consultant Photo"
+            label="CEO & Chief Consultant Photo (1:1 recommended)"
             value={settings.ceoPhotoUrl}
             onChange={(url) => updateSettings({ ceoPhotoUrl: url })}
             folder="profiles"
+            aspect={1}
           />
           <input 
             type="text" 

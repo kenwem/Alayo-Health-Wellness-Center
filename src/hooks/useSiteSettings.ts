@@ -7,20 +7,32 @@ export interface SiteSettings {
   siteName: string;
   logoUrl: string;
   heroBgUrl: string;
+  heroTitle: string;
+  heroSubtitle: string;
   aboutBgUrl: string;
+  aboutFacts: { icon: string; title: string; desc: string }[];
   servicesBgUrl: string;
   blogBgUrl: string;
   ceoPhotoUrl: string;
+  copyrightText: string;
 }
 
 const defaultSettings: SiteSettings = {
   siteName: 'Alayo Health & Wellness',
   logoUrl: 'https://i.imgur.com/J8eXjYF.jpg',
   heroBgUrl: 'https://i.imgur.com/bx3aTpx.jpg',
+  heroTitle: 'We work with Nature to nurture your health.',
+  heroSubtitle: 'Premier naturopathic practice specializing in holistic health solutions rooted in Natural Medicine, led by Prof. Kayode Oseni.',
   aboutBgUrl: 'https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?q=80&w=2070&auto=format&fit=crop',
+  aboutFacts: [
+    { icon: 'ShieldCheck', title: 'Established 1993', desc: 'Over 30 years of clinical practice' },
+    { icon: 'GraduationCap', title: 'Academic Leader', desc: 'Former Dean, School of Natural Medicine' },
+    { icon: 'Award', title: 'National President', desc: 'Academy of Complementary and Alternative Medical Practitioners' }
+  ],
   servicesBgUrl: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?q=80&w=2070&auto=format&fit=crop',
   blogBgUrl: 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=2070&auto=format&fit=crop',
-  ceoPhotoUrl: 'https://i.imgur.com/91WDLQr.jpg'
+  ceoPhotoUrl: 'https://i.imgur.com/91WDLQr.jpg',
+  copyrightText: '© 2025 Alayo Health and Wellness Center. All rights reserved.'
 };
 
 export function useSiteSettings() {
@@ -62,10 +74,14 @@ export function useSiteSettings() {
           siteName: firestoreData.siteName || defaultSettings.siteName,
           logoUrl: ensureDirectImgur(isDefaultOrEmpty(firestoreData.logoUrl) ? defaultSettings.logoUrl : firestoreData.logoUrl) as string,
           heroBgUrl: ensureDirectImgur(isDefaultOrEmpty(firestoreData.heroBgUrl) ? defaultSettings.heroBgUrl : firestoreData.heroBgUrl) as string,
+          heroTitle: firestoreData.heroTitle || defaultSettings.heroTitle,
+          heroSubtitle: firestoreData.heroSubtitle || defaultSettings.heroSubtitle,
           aboutBgUrl: ensureDirectImgur(isDefaultOrEmpty(firestoreData.aboutBgUrl) ? defaultSettings.aboutBgUrl : firestoreData.aboutBgUrl) as string,
+          aboutFacts: firestoreData.aboutFacts || defaultSettings.aboutFacts,
           servicesBgUrl: ensureDirectImgur(isDefaultOrEmpty(firestoreData.servicesBgUrl) ? defaultSettings.servicesBgUrl : firestoreData.servicesBgUrl) as string,
           blogBgUrl: ensureDirectImgur(isDefaultOrEmpty(firestoreData.blogBgUrl) ? defaultSettings.blogBgUrl : firestoreData.blogBgUrl) as string,
           ceoPhotoUrl: ensureDirectImgur(isDefaultOrEmpty(firestoreData.ceoPhotoUrl) ? defaultSettings.ceoPhotoUrl : firestoreData.ceoPhotoUrl) as string,
+          copyrightText: firestoreData.copyrightText || defaultSettings.copyrightText,
         };
         setSettings(data);
         localStorage.setItem(`site_settings_cache_${siteId}`, JSON.stringify(data));

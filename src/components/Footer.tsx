@@ -1,8 +1,13 @@
 import { Link } from 'react-router-dom';
-import { Leaf, MapPin, Phone, Mail, Facebook, ArrowRight } from 'lucide-react';
+import { Leaf, MapPin, Phone, Mail, Facebook, ArrowRight, LayoutDashboard } from 'lucide-react';
 import { useSiteSettings } from '../hooks/useSiteSettings';
+import { User } from 'firebase/auth';
 
-export default function Footer() {
+interface FooterProps {
+  user: User | null;
+}
+
+export default function Footer({ user }: FooterProps) {
   const { settings } = useSiteSettings();
 
   return (
@@ -21,7 +26,7 @@ export default function Footer() {
               <div className="flex flex-col">
                 <span className="font-bold text-xl text-white leading-tight">Alayo Health</span>
                 <span className="text-xs text-lime-400 font-medium uppercase tracking-wider">
-                  & Wellness <Link to="/admin/login" className="hover:text-lime-300 transition-colors">Center</Link>
+                  & Wellness Center
                 </span>
               </div>
             </Link>
@@ -93,7 +98,7 @@ export default function Footer() {
 
         <div className="border-t border-stone-800 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
           <p className="text-sm text-stone-500">
-            &copy; {new Date().getFullYear()} Alayo Health and Wellness <Link to="/admin/login" className="hover:text-stone-400 transition-colors">Center</Link>. All rights reserved.
+            &copy; {new Date().getFullYear()} Alayo Health and Wellness <Link to="/admin" className="hover:text-stone-400 transition-colors">Center</Link>. All rights reserved.
           </p>
           <div className="flex items-center gap-6 text-sm text-stone-500">
             <span>Est. 1993 | Natural Medicine Modalities</span>

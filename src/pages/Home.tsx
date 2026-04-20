@@ -1,3 +1,4 @@
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Leaf, Heart, ShieldCheck, Star } from 'lucide-react';
 import { motion } from 'motion/react';
@@ -37,11 +38,15 @@ export default function Home() {
               <span>Est. 1993 | Over 30 Years of Excellence</span>
             </div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-8 leading-tight drop-shadow-lg">
-              We work with Nature to <br className="hidden md:block" />
-              <span className="text-lime-400">nurture your health.</span>
+              {settings.heroTitle.split('<br/>').map((part, i) => (
+                <React.Fragment key={i}>
+                  {part}
+                  {i < settings.heroTitle.split('<br/>').length - 1 && <br className="hidden md:block" />}
+                </React.Fragment>
+              ))}
             </h1>
             <p className="text-xl md:text-2xl text-stone-200 mb-12 max-w-3xl leading-relaxed drop-shadow-md font-light">
-              Premier naturopathic practice specializing in holistic health solutions rooted in Natural Medicine, led by Prof. Kayode Oseni.
+              {settings.heroSubtitle}
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center w-full sm:w-auto">
               <a
@@ -290,14 +295,12 @@ export default function Home() {
             ))}
           </div>
           <div className="text-center mt-16">
-            <a
-              href="https://facebook.com/kayode.oseni"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              to="/testimonials"
               className="inline-flex items-center gap-2 text-lime-600 font-bold hover:text-lime-700 transition-colors text-lg group"
             >
-              Read more reviews on Facebook <ArrowRight size={20} className="transform group-hover:translate-x-2 transition-transform" />
-            </a>
+              View All Testimonials <ArrowRight size={20} className="transform group-hover:translate-x-2 transition-transform" />
+            </Link>
           </div>
         </div>
       </section>

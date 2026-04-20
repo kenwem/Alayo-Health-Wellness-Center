@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Lock, Mail, ArrowRight, Loader2, UserPlus, Eye, EyeOff } from 'lucide-react';
-import { signInWithEmailAndPassword, sendPasswordResetEmail, createUserWithEmailAndPassword } from 'firebase/auth';
+import { Lock, Mail, ArrowRight, Loader2, Eye, EyeOff } from 'lucide-react';
+import { signInWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { auth } from '../../firebase';
 
 export default function AdminLogin() {
@@ -11,9 +11,17 @@ export default function AdminLogin() {
   const [loading, setLoading] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [showForgot, setShowForgot] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        navigate('/admin');
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,21 +43,6 @@ export default function AdminLogin() {
       } else {
         setError(err.message || 'Failed to sign in. Please check your credentials.');
       }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleRegister = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
-    try {
-      await createUserWithEmailAndPassword(auth, email, password);
-      navigate('/admin');
-    } catch (err: any) {
-      console.error('Registration error:', err);
-      setError(err.message || 'Failed to register. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -97,7 +90,7 @@ export default function AdminLogin() {
           )}
           
           {!showForgot ? (
-            <form onSubmit={isRegistering ? handleRegister : handleLogin} className="space-y-6">
+            <form onSubmit={handleLogin} className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-stone-700 mb-2">Email Address</label>
                 <div className="relative">
@@ -118,15 +111,13 @@ export default function AdminLogin() {
               <div>
                 <div className="flex justify-between items-center mb-2">
                   <label className="block text-sm font-medium text-stone-700">Password</label>
-                  {!isRegistering && (
-                    <button 
-                      type="button" 
-                      onClick={() => setShowForgot(true)}
-                      className="text-xs text-lime-600 hover:text-lime-700 font-medium"
-                    >
-                      Forgot Password?
-                    </button>
-                  )}
+                  <button 
+                    type="button" 
+                    onClick={() => setShowForgot(true)}
+                    className="text-xs text-lime-600 hover:text-lime-700 font-medium"
+                  >
+                    Forgot Password?
+                  </button>
                 </div>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -155,19 +146,9 @@ export default function AdminLogin() {
                 disabled={loading}
                 className="w-full bg-lime-600 hover:bg-lime-700 disabled:bg-stone-400 text-white font-semibold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2 group"
               >
-                {loading ? <Loader2 className="animate-spin" size={20} /> : (isRegistering ? 'Create Admin Account' : 'Sign In to Dashboard')}
-                {!loading && (isRegistering ? <UserPlus size={20} /> : <ArrowRight size={20} className="transform group-hover:translate-x-1 transition-transform" />)}
+                {loading ? <Loader2 className="animate-spin" size={20} /> : 'Sign In to Dashboard'}
+                {!loading && <ArrowRight size={20} className="transform group-hover:translate-x-1 transition-transform" />}
               </button>
-
-              <div className="text-center pt-4 border-t border-stone-100">
-                <button
-                  type="button"
-                  onClick={() => setIsRegistering(!isRegistering)}
-                  className="text-sm text-stone-500 hover:text-lime-600 transition-colors"
-                >
-                  {isRegistering ? 'Already have an account? Sign In' : 'Need an account? Register (Temporary)'}
-                </button>
-              </div>
             </form>
           ) : (
             <form onSubmit={handleForgotPassword} className="space-y-6">

@@ -1,14 +1,65 @@
-import React, { useState } from 'react';
-import { ShieldCheck, Leaf, Heart, BookOpen, ArrowRight, X, Calendar as CalendarIcon, Clock, User, Phone, Mail, CheckCircle2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShieldCheck, Leaf, Heart, BookOpen, ArrowRight, X, Calendar as CalendarIcon, Clock, User, Phone, Mail, CheckCircle2, GraduationCap, Award } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../utils/firebaseErrors';
 import { useSiteSettings } from '../hooks/useSiteSettings';
 import { siteId } from '../constants/siteConfig';
 
+interface Service {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  image: string;
+  features?: string[];
+  position: number;
+}
+
+const DEFAULT_SERVICES: Service[] = [
+  {
+    id: 'default-naturopathic',
+    title: 'Naturopathic Consultation',
+    description: 'Personalized treatment plans for diverse health challenges. We offer expert consultations for conditions like immune boosting, detoxification, pain relief, fertility support, diabetes management, hypertension, and stress reduction.',
+    icon: 'ShieldCheck',
+    image: 'https://images.unsplash.com/photo-1576091160550-217359f4ecf8?q=80&w=2070&auto=format&fit=crop',
+    features: ['Immune Boosting & Detoxification', 'Pain Relief & Fertility Support', 'Diabetes & Hypertension Management'],
+    position: 0
+  },
+  {
+    id: 'default-herbal',
+    title: 'Herbal Remedies',
+    description: 'Formulating and production of proprietary organic remedies for our numerous patients and colleagues in the healing profession. We draw on African Traditional Medicine, Ayurvedic Medicine, and Traditional Chinese Medicine.',
+    icon: 'Leaf',
+    image: 'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=2070&auto=format&fit=crop',
+    features: ['Root Herbs & Leaf Extracts', 'Organic Remedies & Nutraceuticals', 'Global Traditional Medicine Integration'],
+    position: 1
+  },
+  {
+    id: 'default-energy',
+    title: 'Psychic & Energy Healing',
+    description: 'Specialized modalities of Energy Medicine including all forms of crystal therapy, chakras balancing, and aural scanning and cleansing.',
+    icon: 'Heart',
+    image: 'https://i.imgur.com/A6D6O78.jpg',
+    features: ['Crystal Therapies', 'Chakras Balancing', 'Aural Scanning & Cleansing'],
+    position: 2
+  },
+  {
+    id: 'default-education',
+    title: 'Health Education',
+    description: 'Lectures and masterclasses in Energy Medicine, Herbal Medicine, and Herbal Therapeutics led by Prof. Kayode Oseni.',
+    icon: 'GraduationCap',
+    image: 'https://images.unsplash.com/photo-1522202176988-66273c2fd55f?q=80&w=2071&auto=format&fit=crop',
+    features: ['Masterclasses in Energy Medicine', 'Herbal Therapeutics Training', 'Professional Certification Programs'],
+    position: 3
+  }
+];
+
 export default function Services() {
   const { settings } = useSiteSettings();
+  const [services, setServices] = useState<Service[]>([]);
+  const [loading, setLoading] = useState(true);
   const [bookingService, setBookingService] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -21,36 +72,32 @@ export default function Services() {
     message: ''
   });
 
-  const services = [
-    {
-      id: 'naturopathic',
-      title: 'Naturopathic Consultation',
-      description: 'Personalized treatment plans for diverse health challenges. We offer expert consultations for conditions like immune boosting, detoxification, pain relief, fertility support, diabetes management, hypertension, and stress reduction.',
-      icon: <ShieldCheck size={32} />,
-      image: 'https://i.imgur.com/r4gc3aa.jpg'
-    },
-    {
-      id: 'herbal',
-      title: 'Herbal Remedies',
-      description: 'Formulating and production of proprietary organic remedies for our numerous patients and colleagues in the healing profession. We draw on African Traditional Medicine, Ayurvedic Medicine, and Traditional Chinese Medicine.',
-      icon: <Leaf size={32} />,
-      image: 'https://images.unsplash.com/photo-1532336414038-cf19250c5757?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fGhlcmJhbCUyMG1lZGljaW5lfGVufDB8fDB8fHww'
-    },
-    {
-      id: 'energy',
-      title: 'Psychic & Energy Healing',
-      description: 'Specialized modalities of Energy Medicine including all forms of crystal therapy, chakras balancing, and aural scanning and cleansing.',
-      icon: <Heart size={32} />,
-      image: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=2070&auto=format&fit=crop'
-    },
-    {
-      id: 'education',
-      title: 'Health Education',
-      description: 'Lectures and masterclasses in Energy Medicine, Herbal Medicine, and Herbal Therapeutics led by Prof. Kayode Oseni.',
-      icon: <BookOpen size={32} />,
-      image: 'https://plus.unsplash.com/premium_photo-1690301944866-b8b99db14441?w=500&auto=format&fit=crop&q=60&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MjQwfHxoZXJiYWwlMjBtZWRpY2luZXxlbnwwfHwwfHx8MA%3D%3D'
+  useEffect(() => {
+    const q = query(collection(db, 'sites', siteId, 'services'), orderBy('position', 'asc'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Service[];
+      // Use fallback if empty
+      setServices(data.length > 0 ? data : DEFAULT_SERVICES);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const renderIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'ShieldCheck': return <ShieldCheck size={32} />;
+      case 'GraduationCap': return <GraduationCap size={32} />;
+      case 'Award': return <Award size={32} />;
+      case 'Leaf': return <Leaf size={32} />;
+      case 'Heart': return <Heart size={32} />;
+      case 'BookOpen': return <BookOpen size={32} />;
+      default: return <Leaf size={32} />;
     }
-  ];
+  };
 
   const handleBooking = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,71 +142,61 @@ export default function Services() {
       {/* Services List */}
       <section className="py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="space-y-24">
-            {services.map((service, index) => (
-              <div key={service.id} className={`flex flex-col lg:flex-row gap-12 items-center ${index % 2 !== 0 ? 'lg:flex-row-reverse' : ''}`}>
-                <div className="w-full lg:w-1/2">
-                  <div className="relative rounded-2xl overflow-hidden shadow-xl group">
-                    <img
-                      src={service.image}
-                      alt={service.title}
-                      className="w-full h-auto object-cover aspect-[4/3] transform group-hover:scale-105 transition-transform duration-700"
-                      referrerPolicy="no-referrer"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-stone-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-lime-600"></div>
+            </div>
+          ) : services.length > 0 ? (
+            <div className="space-y-24">
+              {services.map((service, index) => (
+                <div key={service.id} className={`flex flex-col lg:flex-row gap-12 items-center ${index % 2 !== 0 ? 'lg:flex-row-reverse' : ''}`}>
+                  <div className="w-full lg:w-1/2">
+                    <div className="relative rounded-2xl overflow-hidden shadow-xl group">
+                      <img
+                        src={service.image}
+                        alt={service.title}
+                        className="w-full h-auto object-cover aspect-[4/3] transform group-hover:scale-105 transition-transform duration-700"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-stone-900/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                    </div>
+                  </div>
+                  
+                  <div className="w-full lg:w-1/2 space-y-6">
+                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-lime-100 text-lime-600 mb-2">
+                      {renderIcon(service.icon)}
+                    </div>
+                    <h2 className="text-3xl md:text-4xl font-bold text-stone-900">{service.title}</h2>
+                    <p className="text-lg text-stone-600 leading-relaxed">
+                      {service.description}
+                    </p>
+                    {service.features && service.features.length > 0 && (
+                      <ul className="space-y-3 pt-4 border-t border-stone-200">
+                        {service.features.map((feature, fIdx) => (
+                          <li key={fIdx} className="flex items-center gap-3 text-stone-700">
+                            <ArrowRight size={16} className="text-lime-500" /> {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                    <div className="pt-6">
+                      <button
+                        onClick={() => setBookingService(service.title)}
+                        className="inline-flex justify-center items-center gap-2 bg-lime-500 hover:bg-lime-600 text-white px-6 py-3 rounded-full font-semibold transition-colors shadow-sm font-bold"
+                      >
+                        Book This Service
+                      </button>
+                    </div>
                   </div>
                 </div>
-                
-                <div className="w-full lg:w-1/2 space-y-6">
-                  <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-lime-100 text-lime-600 mb-2">
-                    {service.icon}
-                  </div>
-                  <h2 className="text-3xl md:text-4xl font-bold text-stone-900">{service.title}</h2>
-                  <p className="text-lg text-stone-600 leading-relaxed">
-                    {service.description}
-                  </p>
-                  <ul className="space-y-3 pt-4 border-t border-stone-200">
-                    {service.id === 'naturopathic' && (
-                      <>
-                        <li className="flex items-center gap-3 text-stone-700"><ArrowRight size={16} className="text-lime-500" /> Immune Boosting & Detoxification</li>
-                        <li className="flex items-center gap-3 text-stone-700"><ArrowRight size={16} className="text-lime-500" /> Pain Relief & Fertility Support</li>
-                        <li className="flex items-center gap-3 text-stone-700"><ArrowRight size={16} className="text-lime-500" /> Diabetes & Hypertension Management</li>
-                      </>
-                    )}
-                    {service.id === 'herbal' && (
-                      <>
-                        <li className="flex items-center gap-3 text-stone-700"><ArrowRight size={16} className="text-lime-500" /> Root Herbs & Leaf Extracts</li>
-                        <li className="flex items-center gap-3 text-stone-700"><ArrowRight size={16} className="text-lime-500" /> Organic Remedies & Nutraceuticals</li>
-                        <li className="flex items-center gap-3 text-stone-700"><ArrowRight size={16} className="text-lime-500" /> Global Traditional Medicine Integration</li>
-                      </>
-                    )}
-                    {service.id === 'energy' && (
-                      <>
-                        <li className="flex items-center gap-3 text-stone-700"><ArrowRight size={16} className="text-lime-500" /> Crystal Therapies</li>
-                        <li className="flex items-center gap-3 text-stone-700"><ArrowRight size={16} className="text-lime-500" /> Chakras Balancing</li>
-                        <li className="flex items-center gap-3 text-stone-700"><ArrowRight size={16} className="text-lime-500" /> Aural Scanning & Cleansing</li>
-                      </>
-                    )}
-                    {service.id === 'education' && (
-                      <>
-                        <li className="flex items-center gap-3 text-stone-700"><ArrowRight size={16} className="text-lime-500" /> Masterclasses in Energy Medicine</li>
-                        <li className="flex items-center gap-3 text-stone-700"><ArrowRight size={16} className="text-lime-500" /> Herbal Therapeutics Training</li>
-                        <li className="flex items-center gap-3 text-stone-700"><ArrowRight size={16} className="text-lime-500" /> Professional Certification Programs</li>
-                      </>
-                    )}
-                  </ul>
-                  <div className="pt-6">
-                    <button
-                      onClick={() => setBookingService(service.title)}
-                      className="inline-flex justify-center items-center gap-2 bg-lime-500 hover:bg-lime-600 text-white px-6 py-3 rounded-full font-semibold transition-colors shadow-sm"
-                    >
-                      Book This Service
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-stone-100">
+              <Leaf size={48} className="mx-auto text-stone-300 mb-4" />
+              <p className="text-stone-500 text-lg italic">No services listed yet. Admin is currently updating this section.</p>
+            </div>
+          )}
         </div>
       </section>
 

@@ -306,10 +306,11 @@ export default function AdminBooks() {
                 </div>
 
                 <ImageUpload
-                  label="Cover Image"
+                  label="Cover Image (0.7:1 recommended)"
                   value={newBook.coverImage}
                   onChange={(url) => setNewBook({...newBook, coverImage: url, manualImageUrl: url})}
                   folder="books"
+                  aspect={0.7}
                 />
 
                 <div>

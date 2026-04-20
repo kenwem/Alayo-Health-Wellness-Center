@@ -10,14 +10,16 @@ interface EditorialPost {
   id: string;
   title: string;
   excerpt: string;
-  category: string;
+  tags: string;
+  metaTitle: string;
+  metaDescription: string;
+  position?: number;
   author: string;
   date: string;
-  image: string;
   status: string;
-  content?: string;
-  slug?: string;
-  position?: number;
+  image: string;
+  content: string;
+  slug: string;
 }
 
 export default function AdminEditorial() {
@@ -51,8 +53,7 @@ export default function AdminEditorial() {
 
   const filteredPosts = posts.filter(post => 
     post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.category.toLowerCase().includes(searchQuery.toLowerCase())
+    post.author.toLowerCase().includes(searchQuery.toLowerCase())
   ).sort((a, b) => {
     const order = sortOrder === 'asc' ? 1 : -1;
     
@@ -83,7 +84,6 @@ export default function AdminEditorial() {
     status: 'Draft',
     publishDate: '',
     featured: false,
-    category: 'Naturopathy & Herbal Medicine',
     tags: '',
     metaTitle: '',
     metaDescription: '',
@@ -118,7 +118,6 @@ export default function AdminEditorial() {
       status: post.status,
       publishDate: post.date,
       featured: false,
-      category: post.category || 'Naturopathy & Herbal Medicine',
       tags: '',
       metaTitle: (post as any).metaTitle || '',
       metaDescription: (post as any).metaDescription || '',
@@ -144,7 +143,6 @@ export default function AdminEditorial() {
       image: newPost.manualImageUrl || newPost.coverImage || 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=2070&auto=format&fit=crop',
       excerpt: newPost.content ? newPost.content.substring(0, 150) + '...' : 'New editorial article...',
       content: newPost.content,
-      category: newPost.category,
       metaTitle: newPost.metaTitle,
       metaDescription: newPost.metaDescription,
       position: Number(newPost.position) || 0
@@ -187,7 +185,6 @@ export default function AdminEditorial() {
             status: 'Draft', 
             publishDate: '', 
             featured: false, 
-            category: 'Naturopathy & Herbal Medicine', 
             tags: '',
             metaTitle: '',
             metaDescription: '',
@@ -291,10 +288,11 @@ export default function AdminEditorial() {
                     </div>
 
                     <ImageUpload
-                      label="Cover Image"
+                      label="Cover Image (16:9 recommended)"
                       value={newPost.coverImage}
                       onChange={(url) => setNewPost({...newPost, coverImage: url, manualImageUrl: url})}
                       folder="blog"
+                      aspect={16/9}
                     />
 
                     <div>
@@ -378,8 +376,6 @@ export default function AdminEditorial() {
                       <span>Prof. Kayode Oseni</span>
                       <span>•</span>
                       <span>{newPost.publishDate || new Date().toLocaleDateString()}</span>
-                      <span>•</span>
-                      <span>{newPost.category}</span>
                     </div>
                     <div className="text-stone-700 whitespace-pre-wrap">
                       {newPost.content || 'Your post content will appear here...'}
@@ -437,19 +433,6 @@ export default function AdminEditorial() {
                   
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-semibold text-stone-700 mb-2">Category</label>
-                      <select 
-                        value={newPost.category} 
-                        onChange={e => setNewPost({...newPost, category: e.target.value})} 
-                        className="w-full px-3 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white"
-                      >
-                        <option value="Naturopathy & Herbal Medicine">Naturopathy & Herbal Medicine</option>
-                        <option value="Chakras & Crystal Therapy">Chakras & Crystal Therapy</option>
-                        <option value="Natural Lifestyle">Natural Lifestyle</option>
-                      </select>
-                    </div>
-                    
-                    <div>
                       <label className="block text-sm font-semibold text-stone-700 mb-2">Tags (comma separated)</label>
                       <input 
                         type="text" 
@@ -484,7 +467,6 @@ export default function AdminEditorial() {
               status: 'Draft', 
               publishDate: '', 
               featured: false, 
-              category: 'Naturopathy & Herbal Medicine', 
               tags: '',
               metaTitle: '',
               metaDescription: '',

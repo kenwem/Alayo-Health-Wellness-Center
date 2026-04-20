@@ -1,6 +1,9 @@
 import { Calendar, User, ArrowRight, Tag } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
+import Pagination from '../components/Pagination';
+
+const ITEMS_PER_PAGE = 6;
 import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../utils/firebaseErrors';
@@ -25,6 +28,7 @@ export default function Editorial() {
   const [posts, setPosts] = useState<EditorialPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState('All');
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     const q = query(
@@ -50,9 +54,19 @@ export default function Editorial() {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeCategory]);
+
   const filteredPosts = activeCategory === 'All' 
     ? posts 
     : posts.filter(post => post.category === activeCategory);
+
+  const totalPages = Math.ceil(filteredPosts.length / ITEMS_PER_PAGE);
+  const paginatedPosts = filteredPosts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   return (
     <div className="flex flex-col min-h-screen bg-stone-50">
@@ -94,7 +108,7 @@ export default function Editorial() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredPosts.map((post) => (
+            {paginatedPosts.map((post) => (
               <article key={post.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-stone-100 flex flex-col group">
                 <div className="relative h-56 overflow-hidden">
                   <img
@@ -125,6 +139,12 @@ export default function Editorial() {
               </article>
             ))}
           </div>
+
+          <Pagination 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+          />
 
           {filteredPosts.length === 0 && (
             <div className="text-center py-12 text-stone-500">

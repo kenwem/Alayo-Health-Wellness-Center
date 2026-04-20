@@ -7,9 +7,14 @@
       "properties": {
         "logoUrl": { "type": "string", "description": "URL of the website logo" },
         "heroBgUrl": { "type": "string", "description": "URL of the hero section background" },
+        "heroTitle": { "type": "string", "description": "Main title on the home page" },
+        "heroSubtitle": { "type": "string", "description": "Subtitle on the home page" },
         "aboutBgUrl": { "type": "string", "description": "URL of the about page background" },
+        "aboutFacts": { "type": "array", "items": { "type": "object" }, "description": "Quick facts for the about page" },
         "servicesBgUrl": { "type": "string", "description": "URL of the services page background" },
-        "ceoPhotoUrl": { "type": "string", "description": "URL of the CEO/Chief Consultant photo" }
+        "blogBgUrl": { "type": "string", "description": "URL of the editorial page background" },
+        "ceoPhotoUrl": { "type": "string", "description": "URL of the CEO/Chief Consultant photo" },
+        "copyrightText": { "type": "string", "description": "Copyright text in footer" }
       }
     },
     "Product": {
@@ -18,14 +23,55 @@
       "type": "object",
       "properties": {
         "name": { "type": "string" },
-        "category": { "type": "string" },
         "price": { "type": "string" },
         "salePrice": { "type": "string" },
-        "stock": { "type": "number" },
+        "stock": { "type": "number", "description": "Stock quantity (optional)" },
         "imageUrl": { "type": "string" },
-        "shortDescription": { "type": "string" }
+        "shortDescription": { "type": "string" },
+        "position": { "type": "number" }
       },
-      "required": ["name", "price", "stock"]
+      "required": ["name", "price"]
+    },
+    "Service": {
+      "title": "Service",
+      "description": "Health and wellness services",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "icon": { "type": "string" },
+        "image": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "position": { "type": "number" }
+      },
+      "required": ["title", "description", "position"]
+    },
+    "Testimonial": {
+      "title": "Testimonial",
+      "description": "Client and patient reviews",
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "author": { "type": "string" },
+        "location": { "type": "string" },
+        "position": { "type": "number" }
+      },
+      "required": ["text", "author", "position"]
+    },
+    "Book": {
+      "title": "Book",
+      "description": "Naturopathic books and research extracts",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string" },
+        "author": { "type": "string" },
+        "price": { "type": "string" },
+        "status": { "type": "string" },
+        "coverImage": { "type": "string" },
+        "preface": { "type": "string" },
+        "position": { "type": "number" }
+      },
+      "required": ["title", "author", "position"]
     },
     "Editorial": {
       "title": "Editorial",
@@ -112,8 +158,16 @@
       "description": "Editorial articles"
     },
     "sites/{siteId}/services/{serviceId}": {
-      "schema": { "type": "object" },
+      "schema": { "$ref": "Service" },
       "description": "Services content"
+    },
+    "sites/{siteId}/testimonials/{testimonialId}": {
+      "schema": { "$ref": "Testimonial" },
+      "description": "Client testimonials"
+    },
+    "sites/{siteId}/books/{bookId}": {
+      "schema": { "$ref": "Book" },
+      "description": "Books and research extracts"
     },
     "sites/{siteId}/{collection}/{docId}/comments/{commentId}": {
       "schema": {

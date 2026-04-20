@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Calendar, ShoppingBag, LogOut, Package, BookOpen, PenTool, MessageSquare, Settings, ArrowLeft } from 'lucide-react';
+import { LayoutDashboard, Calendar, ShoppingBag, LogOut, Package, BookOpen, PenTool, MessageSquare, Settings, ArrowLeft, Star, Leaf } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { auth } from '../../firebase';
 import { useIdleTimeout } from '../../hooks/useIdleTimeout';
@@ -8,16 +8,17 @@ export default function AdminLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // 30 minutes idle timeout
-  useIdleTimeout(1800000);
+  const { minutes, seconds, isExpiringSoon } = useIdleTimeout(1800000);
 
   const links = [
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
     { name: 'Appointments', path: '/admin/appointments', icon: <Calendar size={20} /> },
     { name: 'Orders', path: '/admin/orders', icon: <ShoppingBag size={20} /> },
     { name: 'Products', path: '/admin/products', icon: <Package size={20} /> },
+    { name: 'Testimonials', path: '/admin/testimonials', icon: <MessageSquare size={20} /> },
     { name: 'Books', path: '/admin/books', icon: <BookOpen size={20} /> },
     { name: 'Editorial', path: '/admin/blog', icon: <PenTool size={20} /> },
+    { name: 'Services', path: '/admin/services', icon: <Leaf size={20} /> },
     { name: 'Comments', path: '/admin/comments', icon: <MessageSquare size={20} /> },
     { name: 'Messages', path: '/admin/messages', icon: <MessageSquare size={20} /> },
     { name: 'Site Settings', path: '/admin/settings', icon: <Settings size={20} /> },
@@ -79,6 +80,13 @@ export default function AdminLayout() {
             {links.find(l => l.path === location.pathname)?.name || 'Admin Panel'}
           </h1>
           <div className="flex items-center gap-4">
+            <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono border transition-all duration-500 ${isExpiringSoon ? 'bg-red-100 border-red-300 text-red-700 shadow-md ring-2 ring-red-200' : 'bg-stone-50 border-stone-200 text-stone-500'}`}>
+              <div className={`w-2.5 h-2.5 rounded-full ${isExpiringSoon ? 'bg-red-600 animate-pulse' : 'bg-lime-500'}`} />
+              <span className="font-bold">
+                {isExpiringSoon ? 'SECURITY TIMEOUT: ' : 'Session expires: '}
+                {minutes}:{seconds.toString().padStart(2, '0')}
+              </span>
+            </div>
             {/* Profile icon removed as requested */}
           </div>
         </header>
