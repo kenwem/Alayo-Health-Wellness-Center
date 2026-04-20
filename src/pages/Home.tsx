@@ -38,10 +38,10 @@ export default function Home() {
               <span>Est. 1993 | Over 30 Years of Excellence</span>
             </div>
             <h1 className="text-5xl md:text-6xl lg:text-7xl font-extrabold tracking-tight mb-8 leading-tight drop-shadow-lg">
-              {settings.heroTitle.split('<br/>').map((part, i) => (
+              {(settings.heroTitle || "").split('<br/>').map((part, i) => (
                 <React.Fragment key={i}>
                   {part}
-                  {i < settings.heroTitle.split('<br/>').length - 1 && <br className="hidden md:block" />}
+                  {i < (settings.heroTitle || "").split('<br/>').length - 1 && <br className="hidden md:block" />}
                 </React.Fragment>
               ))}
             </h1>

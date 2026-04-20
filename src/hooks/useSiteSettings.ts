@@ -63,9 +63,12 @@ export function useSiteSettings() {
         // Helper to ensure Imgur links are direct image links
         const ensureDirectImgur = (url: string | undefined) => {
           if (!url) return url;
-          if (url.includes('imgur.com/') && !url.includes('i.imgur.com') && !url.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
-            const id = url.split('/').pop();
-            return `https://i.imgur.com/${id}.jpg`;
+          if (typeof url === 'string' && url.includes('imgur.com/') && !url.includes('i.imgur.com') && !url.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
+            const parts = url.split('/').filter(p => !!p);
+            const id = parts.pop();
+            if (id) {
+              return `https://i.imgur.com/${id}.jpg`;
+            }
           }
           return url;
         };
