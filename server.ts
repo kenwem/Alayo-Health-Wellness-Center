@@ -24,7 +24,13 @@ async function startServer() {
     
     // SPA Fallback: All routes return index.html
     app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
+      const indexPath = path.join(distPath, 'index.html');
+      res.sendFile(indexPath, (err) => {
+        if (err) {
+          console.error('Error sending index.html:', err);
+          res.status(500).send('Internal Server Error: index.html missing');
+        }
+      });
     });
   }
 

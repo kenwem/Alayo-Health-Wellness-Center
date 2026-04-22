@@ -49,14 +49,12 @@ export default function Home() {
               {settings.heroSubtitle}
             </p>
             <div className="flex flex-col sm:flex-row gap-6 justify-center w-full sm:w-auto">
-              <a
-                href="https://wa.me/2348034170747"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                to="/products"
                 className="inline-flex justify-center items-center gap-3 bg-lime-500 hover:bg-lime-600 text-white px-10 py-5 rounded-full text-lg font-bold transition-all shadow-xl shadow-lime-500/20 hover:shadow-lime-500/40 hover:-translate-y-1"
               >
-                Book Consultation <ArrowRight size={20} />
-              </a>
+                View Our Products <ArrowRight size={20} />
+              </Link>
               <Link
                 to="/services"
                 className="inline-flex justify-center items-center gap-3 bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/30 text-white px-10 py-5 rounded-full text-lg font-bold transition-all hover:-translate-y-1"
@@ -323,26 +321,23 @@ export default function Home() {
           viewport={{ once: true }}
           className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center"
         >
-          <h2 className="text-4xl md:text-6xl font-bold text-white mb-6 tracking-tight">Join the Nature's Ways Foundation</h2>
-          <p className="text-lime-100 text-xl mb-12 max-w-2xl mx-auto font-light">
-            Subscribe to our daily serialized newsletters for naturopathic research, herbal remedy insights, and positive lifestyle advocacy.
+          <div className="inline-flex items-center gap-2 mb-6 px-4 py-2 bg-white/20 backdrop-blur-md rounded-full text-white text-sm font-bold uppercase tracking-widest">
+            <Leaf size={16} />
+            <span>Educational Community</span>
+          </div>
+          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-6 tracking-tight">Stay Connected with Nature’s Wisdom</h2>
+          <p className="text-lime-100 text-xl md:text-2xl mb-12 max-w-3xl mx-auto font-light leading-relaxed">
+            Follow our insights on naturopathic research, herbal remedy discoveries, and holistic lifestyle advocacy. Explore our latest articles and findings.
           </p>
-          <form className="flex flex-col sm:flex-row gap-4 max-w-xl mx-auto" onSubmit={(e) => e.preventDefault()}>
-            <input
-              type="email"
-              placeholder="Enter your email address"
-              className="flex-grow px-8 py-5 rounded-full text-stone-800 text-lg focus:outline-none focus:ring-4 focus:ring-lime-400/50 shadow-xl"
-              required
-            />
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              type="submit"
-              className="bg-stone-900 hover:bg-stone-800 text-white px-10 py-5 rounded-full text-lg font-bold transition-colors whitespace-nowrap shadow-xl"
+          <div className="flex justify-center">
+            <Link
+              to="/editorial"
+              className="group relative inline-flex items-center gap-3 bg-white text-lime-700 px-12 py-5 rounded-full text-xl font-extrabold transition-all hover:bg-stone-900 hover:text-white shadow-2xl hover:shadow-white/20"
             >
-              Subscribe Now
-            </motion.button>
-          </form>
+              Explore Editorial Page
+              <ArrowRight size={24} className="group-hover:translate-x-2 transition-transform" />
+            </Link>
+          </div>
         </motion.div>
       </section>
     </motion.div>

@@ -10,7 +10,7 @@ interface EditorialPost {
   id: string;
   title: string;
   excerpt: string;
-  tags: string;
+  category: string;
   metaTitle: string;
   metaDescription: string;
   position?: number;
@@ -30,6 +30,12 @@ export default function AdminEditorial() {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+
+  const CATEGORIES = [
+    'Naturopathy & Herbal Medicine',
+    'Chakras & Crystal Therapy',
+    'Natural Lifestyle'
+  ];
 
   useEffect(() => {
     const q = query(collection(db, 'sites', siteId, 'editorial'));
@@ -53,7 +59,8 @@ export default function AdminEditorial() {
 
   const filteredPosts = posts.filter(post => 
     post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    post.author.toLowerCase().includes(searchQuery.toLowerCase())
+    post.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    post.category?.toLowerCase().includes(searchQuery.toLowerCase())
   ).sort((a, b) => {
     const order = sortOrder === 'asc' ? 1 : -1;
     
@@ -84,7 +91,7 @@ export default function AdminEditorial() {
     status: 'Draft',
     publishDate: '',
     featured: false,
-    tags: '',
+    category: 'Naturopathy & Herbal Medicine',
     metaTitle: '',
     metaDescription: '',
     position: 0
@@ -118,7 +125,7 @@ export default function AdminEditorial() {
       status: post.status,
       publishDate: post.date,
       featured: false,
-      tags: '',
+      category: post.category || 'Naturopathy & Herbal Medicine',
       metaTitle: (post as any).metaTitle || '',
       metaDescription: (post as any).metaDescription || '',
       position: post.position || 0
@@ -132,7 +139,7 @@ export default function AdminEditorial() {
     setIsSaving(true);
     setStatusMessage(null);
     
-    const today = new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
+    const today = new Date().toLocaleDateString('en-GB');
     
     const postData = {
       title: newPost.title,
@@ -143,6 +150,7 @@ export default function AdminEditorial() {
       image: newPost.manualImageUrl || newPost.coverImage || 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=2070&auto=format&fit=crop',
       excerpt: newPost.content ? newPost.content.substring(0, 150) + '...' : 'New editorial article...',
       content: newPost.content,
+      category: newPost.category,
       metaTitle: newPost.metaTitle,
       metaDescription: newPost.metaDescription,
       position: Number(newPost.position) || 0
@@ -185,7 +193,7 @@ export default function AdminEditorial() {
             status: 'Draft', 
             publishDate: '', 
             featured: false, 
-            tags: '',
+            category: 'Naturopathy & Herbal Medicine',
             metaTitle: '',
             metaDescription: '',
             position: 0
@@ -375,7 +383,7 @@ export default function AdminEditorial() {
                     <div className="flex items-center gap-4 text-stone-500 text-sm mb-8">
                       <span>Prof. Kayode Oseni</span>
                       <span>•</span>
-                      <span>{newPost.publishDate || new Date().toLocaleDateString()}</span>
+                      <span>{newPost.publishDate || new Date().toLocaleDateString('en-GB')}</span>
                     </div>
                     <div className="text-stone-700 whitespace-pre-wrap">
                       {newPost.content || 'Your post content will appear here...'}
@@ -433,13 +441,16 @@ export default function AdminEditorial() {
                   
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-semibold text-stone-700 mb-2">Tags (comma separated)</label>
-                      <input 
-                        type="text" 
-                        value={newPost.tags} 
-                        onChange={e => setNewPost({...newPost, tags: e.target.value})} 
-                        className="w-full px-3 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-blue-500" 
-                      />
+                      <label className="block text-sm font-semibold text-stone-700 mb-2">Category</label>
+                      <select 
+                        value={newPost.category} 
+                        onChange={e => setNewPost({...newPost, category: e.target.value})} 
+                        className="w-full px-3 py-2 border border-stone-200 rounded-lg focus:outline-none focus:border-blue-500 bg-white"
+                      >
+                        {CATEGORIES.map(cat => (
+                          <option key={cat} value={cat}>{cat}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
                 </div>
@@ -467,7 +478,7 @@ export default function AdminEditorial() {
               status: 'Draft', 
               publishDate: '', 
               featured: false, 
-              tags: '',
+              category: 'Naturopathy & Herbal Medicine',
               metaTitle: '',
               metaDescription: '',
               position: 0
@@ -525,7 +536,7 @@ export default function AdminEditorial() {
               <tr>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Pos</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Title</th>
-                <th className="px-6 py-4 text-sm font-semibold text-stone-600">Author</th>
+                <th className="px-6 py-4 text-sm font-semibold text-stone-600">Category</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Date</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Status</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600 text-right">Actions</th>
@@ -536,8 +547,8 @@ export default function AdminEditorial() {
                 <tr key={post.id} className="hover:bg-stone-50">
                   <td className="px-6 py-4 text-stone-400 text-xs font-mono">{post.position || 0}</td>
                   <td className="px-6 py-4 text-stone-800 font-medium">{post.title}</td>
-                  <td className="px-6 py-4 text-stone-600">{post.author}</td>
-                  <td className="px-6 py-4 text-stone-600">{post.date}</td>
+                  <td className="px-6 py-4 text-stone-600 text-xs">{post.category}</td>
+                  <td className="px-6 py-4 text-stone-600 text-xs">{post.date}</td>
                   <td className="px-6 py-4">
                     <span className={`px-3 py-1 rounded-full text-xs font-medium ${post.status === 'Published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
                       {post.status}

@@ -91,7 +91,7 @@ export default function Orders() {
       product: newOrder.product,
       total: formattedTotal,
       status: newOrder.status,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' })
+      date: new Date().toLocaleDateString('en-GB')
     };
 
     try {

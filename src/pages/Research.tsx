@@ -24,6 +24,7 @@ export default function Research() {
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
+  const [expandedBooks, setExpandedBooks] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const q = query(
@@ -46,6 +47,10 @@ export default function Research() {
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
+
+  const toggleExpand = (id: string) => {
+    setExpandedBooks(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   return (
     <motion.div 
@@ -81,7 +86,7 @@ export default function Research() {
             </div>
           ) : paginatedBooks.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+              <div className="grid grid-cols-1 gap-12">
                 {paginatedBooks.map((book, idx) => (
                   <motion.div 
                     key={book.id}
@@ -89,18 +94,18 @@ export default function Research() {
                   whileInView={{ y: 0, opacity: 1 }}
                   viewport={{ once: true }}
                   transition={{ delay: idx * 0.1 }}
-                  className="bg-white rounded-3xl overflow-hidden shadow-sm border border-stone-200 flex flex-col sm:flex-row hover:shadow-xl transition-all group"
+                  className="bg-white rounded-3xl overflow-hidden shadow-sm border border-stone-200 flex flex-col md:flex-row hover:shadow-xl transition-all group min-h-[400px]"
                 >
-                  <div className="sm:w-2/5 relative">
+                  <div className="md:w-2/5 relative bg-stone-100 flex items-center justify-center p-8">
                     {book.coverImage ? (
                       <img 
                         src={book.coverImage} 
                         alt={book.title} 
-                        className="w-full h-full object-cover aspect-[3/4] group-hover:scale-105 transition-transform duration-700" 
+                        className="max-h-[350px] w-auto shadow-2xl group-hover:scale-105 transition-transform duration-700 mx-auto" 
                         referrerPolicy="no-referrer"
                       />
                     ) : (
-                      <div className="w-full h-full bg-stone-100 flex flex-col items-center justify-center p-8 text-stone-400 aspect-[3/4]">
+                      <div className="w-full h-full min-h-[300px] flex flex-col items-center justify-center text-stone-400">
                         <BookIcon size={48} className="mb-2 opacity-20" />
                         <span className="text-sm font-medium">No cover image</span>
                       </div>
@@ -109,15 +114,25 @@ export default function Research() {
                       {book.price}
                     </div>
                   </div>
-                  <div className="p-8 sm:w-3/5 flex flex-col">
+                  <div className="p-8 md:w-3/5 flex flex-col justify-center">
                     <div className="flex-1">
-                      <h3 className="text-2xl font-bold text-stone-900 mb-2 leading-tight">{book.title}</h3>
-                      <p className="text-lime-600 font-bold text-sm uppercase tracking-wider mb-6">By {book.author}</p>
+                      <h3 className="text-3xl font-bold text-stone-900 mb-2 leading-tight">{book.title}</h3>
+                      <p className="text-lime-600 font-bold text-lg mb-6">By {book.author}</p>
                       <div className="relative">
-                        <Bookmark size={20} className="absolute -left-7 top-1 text-stone-200" />
-                        <p className="text-stone-600 text-sm leading-relaxed italic mb-8">
-                          {book.preface || "No preface available."}
-                        </p>
+                        <Bookmark size={20} className="absolute -left-7 top-1 text-stone-200 hidden lg:block" />
+                        <div className="text-stone-600 text-sm leading-relaxed italic mb-8">
+                          <p className={`whitespace-pre-wrap ${expandedBooks[book.id] ? '' : 'line-clamp-6'}`}>
+                            {book.preface || "No preface available."}
+                          </p>
+                          {book.preface && book.preface.length > 300 && (
+                            <button 
+                              onClick={() => toggleExpand(book.id)}
+                              className="text-lime-600 font-bold mt-2 hover:text-lime-700 underline"
+                            >
+                              {expandedBooks[book.id] ? 'Read Less' : 'Read Full Preface'}
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
                     <div className="pt-6 border-t border-stone-100 flex gap-4">
@@ -125,7 +140,7 @@ export default function Research() {
                         href={`https://wa.me/2348034170747?text=Hello, I am interested in purchasing the book: ${book.title}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex-1 bg-stone-900 text-white px-6 py-3 rounded-xl font-bold text-center hover:bg-stone-800 transition-colors flex items-center justify-center gap-2"
+                        className="bg-stone-900 text-white px-8 py-3 rounded-xl font-bold text-center hover:bg-lime-600 transition-colors flex items-center justify-center gap-2"
                       >
                         Order via WhatsApp
                       </a>

@@ -13,14 +13,12 @@ export default function AdminLayout() {
   const links = [
     { name: 'Dashboard', path: '/admin', icon: <LayoutDashboard size={20} /> },
     { name: 'Appointments', path: '/admin/appointments', icon: <Calendar size={20} /> },
-    { name: 'Orders', path: '/admin/orders', icon: <ShoppingBag size={20} /> },
     { name: 'Products', path: '/admin/products', icon: <Package size={20} /> },
     { name: 'Testimonials', path: '/admin/testimonials', icon: <MessageSquare size={20} /> },
     { name: 'Books', path: '/admin/books', icon: <BookOpen size={20} /> },
     { name: 'Editorial', path: '/admin/blog', icon: <PenTool size={20} /> },
     { name: 'Services', path: '/admin/services', icon: <Leaf size={20} /> },
     { name: 'Comments', path: '/admin/comments', icon: <MessageSquare size={20} /> },
-    { name: 'Messages', path: '/admin/messages', icon: <MessageSquare size={20} /> },
     { name: 'Site Settings', path: '/admin/settings', icon: <Settings size={20} /> },
   ];
 

@@ -104,8 +104,16 @@ export default function Services() {
     setIsSubmitting(true);
 
     try {
+      // Format date to dd/mm/yyyy
+      let formattedDate = formData.date;
+      if (formData.date && formData.date.includes('-')) {
+        const [year, month, day] = formData.date.split('-');
+        formattedDate = `${day}/${month}/${year}`;
+      }
+
       await addDoc(collection(db, 'sites', siteId, 'appointments'), {
         ...formData,
+        date: formattedDate,
         service: bookingService,
         status: 'Pending',
         createdAt: serverTimestamp()
@@ -113,6 +121,7 @@ export default function Services() {
       setIsSubmitted(true);
       setFormData({ name: '', email: '', phone: '', date: '', time: '', message: '' });
     } catch (error) {
+      console.error("Booking error:", error);
       handleFirestoreError(error, OperationType.CREATE, `sites/${siteId}/appointments`);
     } finally {
       setIsSubmitting(false);

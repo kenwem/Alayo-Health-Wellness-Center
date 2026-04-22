@@ -79,8 +79,10 @@ export default function CommentSection({ collectionName, docId }: CommentSection
       const commentsData: Comment[] = [];
       snapshot.docs.forEach((commentDoc) => {
         const data = commentDoc.data();
-        // Show if approved OR if it's the current user's pending comment
-        if (data.status === 'approved' || (auth.currentUser && data.userId === auth.currentUser.uid)) {
+        // ONLY show if it's approved OR if the author is an admin (auto-approved via submission but checking here too)
+        const isAuthorAdmin = isAdmin(data.userEmail);
+        
+        if (data.status === 'approved' || isAuthorAdmin) {
           const comment = { id: commentDoc.id, ...data } as Comment;
           
           // Fetch replies for each comment
@@ -90,7 +92,7 @@ export default function CommentSection({ collectionName, docId }: CommentSection
           onSnapshot(rq, (rSnapshot) => {
             const replies = rSnapshot.docs
               .map(rdoc => ({ id: rdoc.id, ...rdoc.data() }))
-              .filter((r: any) => r.status === 'approved' || (auth.currentUser && r.userId === auth.currentUser.uid)) as Reply[];
+              .filter((r: any) => r.status === 'approved' || isAdmin(r.userEmail)) as Reply[];
             setComments(prev => prev.map(c => c.id === comment.id ? { ...c, replies } : c));
           }, (error) => {
             console.error('Error fetching replies:', error);
@@ -312,7 +314,9 @@ export default function CommentSection({ collectionName, docId }: CommentSection
                         )}
                       </div>
                       <span className="text-[10px] text-stone-400">
-                        {comment.createdAt?.toDate().toLocaleDateString()}
+                        {comment.createdAt?.toDate() ? 
+                          `${comment.createdAt.toDate().getDate().toString().padStart(2, '0')}/${(comment.createdAt.toDate().getMonth() + 1).toString().padStart(2, '0')}/${comment.createdAt.toDate().getFullYear()}` 
+                          : ''}
                       </span>
                     </div>
                     <p className="text-stone-700 text-sm leading-relaxed">{comment.text}</p>
@@ -370,7 +374,9 @@ export default function CommentSection({ collectionName, docId }: CommentSection
                                 )}
                               </div>
                               <span className="text-[10px] text-stone-400">
-                                {reply.createdAt?.toDate().toLocaleDateString()}
+                                {reply.createdAt?.toDate() ? 
+                                  `${reply.createdAt.toDate().getDate().toString().padStart(2, '0')}/${(reply.createdAt.toDate().getMonth() + 1).toString().padStart(2, '0')}/${reply.createdAt.toDate().getFullYear()}` 
+                                  : ''}
                               </span>
                             </div>
                             <p className="text-stone-700 text-xs leading-relaxed">{reply.text}</p>

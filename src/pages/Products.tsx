@@ -17,6 +17,7 @@ interface Product {
   imageUrl: string;
   shortDescription: string;
   position?: number;
+  variations?: { name: string; price: string; salePrice?: string }[];
 }
 
 export default function Products() {
@@ -161,13 +162,32 @@ export default function Products() {
                     
                     <div className="flex items-center justify-between mt-auto pt-6 border-t border-stone-100">
                       <div className="flex flex-col">
-                        {product.salePrice && (
-                          <span className="text-xs text-stone-400 line-through font-medium">{product.price}</span>
+                        {product.variations && product.variations.length > 0 ? (
+                          <div className="space-y-1 mb-2">
+                             {product.variations.map((v, i) => (
+                               <div key={i} className="text-xs text-stone-500 font-medium">
+                                 {v.name}: {v.salePrice ? (
+                                   <>
+                                     <span className="text-red-600 font-bold">{v.salePrice}</span>
+                                     <span className="text-stone-400 line-through ml-1">{v.price}</span>
+                                   </>
+                                 ) : (
+                                   <span className="text-lime-600 font-bold">{v.price}</span>
+                                 )}
+                               </div>
+                             ))}
+                          </div>
+                        ) : (
+                          <>
+                            {product.salePrice && (
+                              <span className="text-xs text-stone-400 line-through font-medium">{product.price}</span>
+                            )}
+                            <span className="text-2xl font-extrabold text-lime-600">{product.salePrice || product.price}</span>
+                          </>
                         )}
-                        <span className="text-2xl font-extrabold text-lime-600">{product.salePrice || product.price}</span>
                       </div>
                       <a
-                        href={`https://wa.me/2348034170747?text=Hello, I am interested in purchasing the product: ${product.name}`}
+                        href={`https://wa.me/2348034170747?text=Hello, I am interested in purchasing the product: ${product.name}${product.variations && product.variations.length > 0 ? '. Options: ' + product.variations.map(v => `${v.name} (${v.salePrice || v.price})`).join(', ') : ''}`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center justify-center gap-2 bg-stone-900 hover:bg-lime-600 text-white px-6 py-2.5 rounded-full text-sm font-bold transition-all shadow-lg hover:shadow-lime-200"

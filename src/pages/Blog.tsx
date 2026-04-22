@@ -62,6 +62,31 @@ export default function Editorial() {
     ? posts 
     : posts.filter(post => post.category === activeCategory);
 
+  const getCategoryTheme = (category: string) => {
+    switch (category) {
+      case 'Naturopathy & Herbal Medicine':
+        return {
+          color: 'bg-green-500',
+          image: 'https://images.unsplash.com/photo-1512290923902-8a9f81dc236c?q=80&w=1000'
+        };
+      case 'Chakras & Crystal Therapy':
+        return {
+          color: 'bg-purple-500',
+          image: 'https://images.unsplash.com/photo-1515405299443-f71bb7680795?q=80&w=1000'
+        };
+      case 'Natural Lifestyle':
+        return {
+          color: 'bg-orange-500',
+          image: 'https://images.unsplash.com/photo-1476480862126-209bfaa8edc8?q=80&w=1000'
+        };
+      default:
+        return {
+          color: 'bg-lime-500',
+          image: 'https://images.unsplash.com/photo-1490818387583-1baba5e638af?q=80&w=1000'
+        };
+    }
+  };
+
   const totalPages = Math.ceil(filteredPosts.length / ITEMS_PER_PAGE);
   const paginatedPosts = filteredPosts.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -82,8 +107,8 @@ export default function Editorial() {
         </div>
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">Nature's Ways Editorial</h1>
-          <p className="text-xl text-stone-300 max-w-2xl mx-auto">
-            Our hub for naturopathic research, herbal remedy insights, and positive lifestyle advocacy.
+          <p className="text-xl text-stone-300 max-w-2xl mx-auto italic">
+            "Your companion on the path to vibrant health and spiritual alignment." - Prof. Kayode Oseni
           </p>
         </div>
       </section>
@@ -94,12 +119,12 @@ export default function Editorial() {
           
           <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-4">
             <h2 className="text-3xl font-bold text-stone-900">Latest Articles</h2>
-            <div className="flex gap-2 overflow-x-auto pb-2 w-full md:w-auto">
+            <div className="flex gap-2 overflow-x-auto pb-4 w-full md:w-auto">
               {['All', 'Naturopathy & Herbal Medicine', 'Chakras & Crystal Therapy', 'Natural Lifestyle'].map((cat) => (
                 <button 
                   key={cat} 
                   onClick={() => setActiveCategory(cat)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeCategory === cat ? 'bg-lime-500 text-white' : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'}`}
+                  className={`px-4 py-2 rounded-full text-sm font-bold whitespace-nowrap transition-all ${activeCategory === cat ? 'bg-lime-500 text-white shadow-lg' : 'bg-white text-stone-600 border border-stone-200 hover:bg-stone-50'}`}
                 >
                   {cat}
                 </button>
@@ -108,36 +133,44 @@ export default function Editorial() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {paginatedPosts.map((post) => (
-              <article key={post.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-stone-100 flex flex-col group">
-                <div className="relative h-56 overflow-hidden">
+            {paginatedPosts.map((post) => {
+              const theme = getCategoryTheme(post.category);
+              return (
+                <article key={post.id} className="bg-white rounded-[2rem] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 border border-stone-100 flex flex-col group hover:-translate-y-2">
+                <div className="relative h-60 overflow-hidden">
                   <img
-                    src={post.image}
+                    src={post.image || theme.image}
                     alt={post.title}
-                    className="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500"
+                    className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-700 font-bold"
                     referrerPolicy="no-referrer"
                   />
-                  <div className="absolute top-4 left-4 bg-lime-500 text-white px-3 py-1 rounded-full text-xs font-bold shadow-sm flex items-center gap-1">
-                    <Tag size={12} /> {post.category}
+                  <div className={`absolute top-4 left-4 ${theme.color} text-white px-3 py-1 rounded-full text-[10px] font-extrabold shadow-sm flex items-center gap-1 uppercase tracking-widest`}>
+                    <Tag size={12} /> {post.category || 'General'}
                   </div>
                 </div>
-                <div className="p-6 flex flex-col flex-grow">
-                  <h3 className="text-xl font-bold text-stone-900 mb-3 leading-tight group-hover:text-lime-600 transition-colors">
+                <div className="p-8 flex flex-col flex-grow">
+                  <div className="flex items-center gap-2 text-stone-400 text-xs font-bold mb-4 uppercase tracking-widest">
+                    <Calendar size={14} className="text-lime-500" />
+                    {post.date}
+                  </div>
+                  <h3 className="text-2xl font-bold text-stone-900 mb-4 leading-tight group-hover:text-lime-600 transition-colors line-clamp-2">
                     <Link to={`/blog/${post.slug || post.id}`}>{post.title}</Link>
                   </h3>
-                  <p className="text-stone-600 text-sm mb-6 flex-grow">{post.excerpt}</p>
+                  <p className="text-stone-600 text-sm mb-6 flex-grow leading-relaxed line-clamp-3">{post.excerpt}</p>
                   
-                  <div className="mt-auto pt-4 border-t border-stone-100">
+                  <div className="mt-auto pt-6 border-t border-stone-100 flex items-center justify-between">
+                    <span className="text-stone-400 text-xs font-bold italic">By {post.author}</span>
                     <Link 
                       to={`/blog/${post.slug || post.id}`}
-                      className="text-lime-600 font-bold text-sm flex items-center gap-2 hover:gap-3 transition-all"
+                      className="text-lime-600 font-bold text-sm flex items-center gap-2 hover:gap-3 transition-all group-hover:translate-x-1"
                     >
-                      Read Article <ArrowRight size={16} />
+                      Read Article <ArrowRight size={18} />
                     </Link>
                   </div>
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
 
           <Pagination 

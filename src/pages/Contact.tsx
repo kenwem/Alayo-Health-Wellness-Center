@@ -23,7 +23,7 @@ export default function Contact() {
       await addDoc(collection(db, 'sites', siteId, 'messages'), {
         ...formData,
         status: 'Unread',
-        date: new Date().toLocaleString(),
+        date: new Date().toLocaleDateString('en-GB') + ' ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
         createdAt: serverTimestamp()
       });
       setIsSubmitted(true);

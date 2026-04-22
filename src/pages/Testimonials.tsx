@@ -23,6 +23,8 @@ export default function Testimonials() {
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
 
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
   useEffect(() => {
     const q = query(collection(db, 'sites', siteId, 'testimonials'), orderBy('position', 'asc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -78,27 +80,45 @@ export default function Testimonials() {
           ) : paginatedTestimonials.length > 0 ? (
             <>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                {paginatedTestimonials.map((testimonial, idx) => (
-                  <motion.div 
-                    key={testimonial.id}
-                  initial={{ y: 30, opacity: 0 }}
-                  whileInView={{ y: 0, opacity: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: idx % 3 * 0.1 }}
-                  className="bg-white p-10 rounded-3xl shadow-sm border border-stone-100 relative hover:shadow-xl transition-shadow group"
-                >
-                  <div className="text-lime-500 mb-6 opacity-30 group-hover:opacity-50 transition-opacity">
-                    <Quote size={48} fill="currentColor" />
-                  </div>
-                  <p className="text-stone-700 italic mb-8 leading-relaxed relative z-10 text-lg">
-                    "{testimonial.text}"
-                  </p>
-                  <div className="mt-auto border-t border-stone-100 pt-6">
-                    <p className="font-bold text-stone-900 text-lg">{testimonial.author}</p>
-                    <p className="text-sm text-lime-600 font-bold uppercase tracking-wider mt-1">{testimonial.location}</p>
-                  </div>
-                </motion.div>
-              ))}
+                {paginatedTestimonials.map((testimonial, idx) => {
+                  const isExpanded = expandedId === testimonial.id;
+                  const needsToggle = testimonial.text.length > 280;
+                  const displayText = isExpanded || !needsToggle 
+                    ? testimonial.text 
+                    : testimonial.text.substring(0, 280) + '...';
+
+                  return (
+                    <motion.div 
+                      key={testimonial.id}
+                      initial={{ y: 30, opacity: 0 }}
+                      whileInView={{ y: 0, opacity: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: idx % 3 * 0.1 }}
+                      className="bg-white p-10 rounded-3xl shadow-sm border border-stone-100 relative hover:shadow-xl transition-shadow group flex flex-col h-full"
+                    >
+                      <div className="text-lime-500 mb-6 opacity-30 group-hover:opacity-50 transition-opacity">
+                        <Quote size={48} fill="currentColor" />
+                      </div>
+                      <div className="flex-grow">
+                        <p className={`text-stone-700 italic mb-4 leading-relaxed relative z-10 text-lg ${isExpanded ? 'whitespace-pre-wrap' : ''}`}>
+                          "{displayText}"
+                        </p>
+                        {needsToggle && (
+                          <button 
+                            onClick={() => setExpandedId(isExpanded ? null : testimonial.id)}
+                            className="text-lime-600 font-bold text-sm hover:text-lime-700 transition-colors mb-6 flex items-center gap-1"
+                          >
+                            {isExpanded ? 'Read Less' : 'Read More'}
+                          </button>
+                        )}
+                      </div>
+                      <div className="mt-auto border-t border-stone-100 pt-6">
+                        <p className="font-bold text-stone-900 text-lg leading-tight">{testimonial.author}</p>
+                        <p className="text-sm text-lime-600 font-bold uppercase tracking-wider mt-1">{testimonial.location}</p>
+                      </div>
+                    </motion.div>
+                  );
+                })}
             </div>
             
             <Pagination 

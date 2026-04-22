@@ -31,7 +31,7 @@ interface ModerationItem {
 export default function CommentModeration() {
   const [items, setItems] = useState<ModerationItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'pending' | 'approved'>('pending');
+  const [filter, setFilter] = useState<'all' | 'pending' | 'approved'>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -198,7 +198,9 @@ export default function CommentModeration() {
                     </div>
                     <div className="flex items-center gap-2 text-xs text-stone-400">
                       <Calendar size={14} />
-                      {item.createdAt?.toDate().toLocaleString()}
+                      {item.createdAt?.toDate() ? 
+                        `${item.createdAt.toDate().getDate().toString().padStart(2, '0')}/${(item.createdAt.toDate().getMonth() + 1).toString().padStart(2, '0')}/${item.createdAt.toDate().getFullYear()} ${item.createdAt.toDate().getHours().toString().padStart(2, '0')}:${item.createdAt.toDate().getMinutes().toString().padStart(2, '0')}` 
+                        : ''}
                     </div>
                   </div>
 

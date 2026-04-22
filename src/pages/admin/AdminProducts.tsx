@@ -16,6 +16,7 @@ interface Product {
   imageUrl: string;
   shortDescription: string;
   position?: number;
+  variations?: { name: string; price: string; salePrice?: string }[];
 }
 
 export default function AdminProducts() {
@@ -83,7 +84,8 @@ export default function AdminProducts() {
     imageUrl: '',
     manualImageUrl: '',
     shortDescription: '',
-    position: 0
+    position: 0,
+    variations: [] as { name: string, price: string, salePrice?: string }[]
   });
 
   const handleDelete = (id: string) => {
@@ -111,17 +113,29 @@ export default function AdminProducts() {
       imageUrl: product.imageUrl,
       manualImageUrl: product.imageUrl,
       shortDescription: product.shortDescription || '',
-      position: product.position || 0
+      position: product.position || 0,
+      variations: product.variations || []
     });
     setIsAddModalOpen(true);
   };
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!newProduct.price && newProduct.variations.length === 0) {
+      alert('Please provide either a main price or at least one variation.');
+      return;
+    }
     setIsSaving(true);
-    const formattedPrice = newProduct.price.startsWith('₦') ? newProduct.price : `₦${newProduct.price}`;
+    const formattedPrice = newProduct.price ? (newProduct.price.startsWith('₦') ? newProduct.price : `₦${newProduct.price}`) : '';
     const formattedSalePrice = newProduct.salePrice ? (newProduct.salePrice.startsWith('₦') ? newProduct.salePrice : `₦${newProduct.salePrice}`) : '';
     
+    // Format variations with Naira symbol if missing
+    const formattedVariations = newProduct.variations.map(v => ({
+      name: v.name,
+      price: v.price.startsWith('₦') ? v.price : `₦${v.price}`,
+      salePrice: v.salePrice ? (v.salePrice.startsWith('₦') ? v.salePrice : `₦${v.salePrice}`) : ''
+    }));
+
     const productData = {
       name: newProduct.name,
       price: formattedPrice,
@@ -129,7 +143,8 @@ export default function AdminProducts() {
       stock: newProduct.stock !== '' ? Number(newProduct.stock) : null,
       imageUrl: newProduct.manualImageUrl || newProduct.imageUrl,
       shortDescription: newProduct.shortDescription,
-      position: Number(newProduct.position) || 0
+      position: Number(newProduct.position) || 0,
+      variations: formattedVariations
     };
 
     console.log('Submitting product data:', productData);
@@ -144,7 +159,7 @@ export default function AdminProducts() {
       }
       setIsAddModalOpen(false);
       setEditingId(null);
-      setNewProduct({ name: '', price: '', salePrice: '', stock: '', imageUrl: '', manualImageUrl: '', shortDescription: '', position: 0 });
+      setNewProduct({ name: '', price: '', salePrice: '', stock: '', imageUrl: '', manualImageUrl: '', shortDescription: '', position: 0, variations: [] });
     } catch (error) {
       console.error('Error saving product:', error);
       handleFirestoreError(error, editingId ? OperationType.UPDATE : OperationType.CREATE, editingId ? `sites/${siteId}/products/${editingId}` : `sites/${siteId}/products`);
@@ -160,7 +175,7 @@ export default function AdminProducts() {
         <button 
           onClick={() => {
             setEditingId(null);
-            setNewProduct({ name: '', price: '', salePrice: '', stock: '', imageUrl: '', manualImageUrl: '', shortDescription: '', position: 0 });
+            setNewProduct({ name: '', price: '', salePrice: '', stock: '', imageUrl: '', manualImageUrl: '', shortDescription: '', position: 0, variations: [] });
             setIsAddModalOpen(true);
           }}
           className="bg-lime-600 hover:bg-lime-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
@@ -296,7 +311,7 @@ export default function AdminProducts() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-stone-700 mb-1">Price (₦)</label>
-                    <input required type="text" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" placeholder="e.g. 25000" />
+                    <input type="text" value={newProduct.price} onChange={e => setNewProduct({...newProduct, price: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" placeholder="e.g. 25000" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-stone-700 mb-1">Sale Price (₦) <span className="text-stone-400 font-normal">(Optional)</span></label>
@@ -308,6 +323,84 @@ export default function AdminProducts() {
                   <input type="number" value={newProduct.stock} onChange={e => setNewProduct({...newProduct, stock: e.target.value})} className="w-full px-3 py-2 border border-stone-300 rounded-lg focus:ring-2 focus:ring-lime-500 focus:outline-none" />
                 </div>
                 
+                <div>
+                  <label className="block text-sm font-bold text-stone-700 mb-2">Product Variations (Optional)</label>
+                  <p className="text-[10px] text-stone-500 mb-3">Add different pack sizes or quantities with their own prices.</p>
+                  
+                  <div className="space-y-3">
+                    {newProduct.variations.map((v, idx) => (
+                      <div key={idx} className="flex gap-2 items-start p-3 bg-stone-50 rounded-lg border border-stone-200">
+                        <div className="flex-1 space-y-2">
+                          <input 
+                            type="text" 
+                            value={v.name} 
+                            onChange={e => {
+                              const updated = [...newProduct.variations];
+                              updated[idx].name = e.target.value;
+                              setNewProduct({...newProduct, variations: updated});
+                            }}
+                            placeholder="e.g. 50 Packs" 
+                            className="w-full px-2 py-1.5 text-xs border border-stone-300 rounded focus:ring-1 focus:ring-lime-500 outline-none"
+                          />
+                          <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-1 flex-1">
+                              <span className="text-stone-400 text-xs text-nowrap">Price ₦</span>
+                              <input 
+                                type="text" 
+                                value={v.price.replace('₦', '')} 
+                                onChange={e => {
+                                  const updated = [...newProduct.variations];
+                                  updated[idx].price = e.target.value;
+                                  setNewProduct({...newProduct, variations: updated});
+                                }}
+                                placeholder="Price" 
+                                className="w-full px-2 py-1.5 text-xs border border-stone-300 rounded focus:ring-1 focus:ring-lime-500 outline-none"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1 flex-1">
+                              <span className="text-stone-400 text-xs text-nowrap">Sale ₦</span>
+                              <input 
+                                type="text" 
+                                value={v.salePrice?.replace('₦', '') || ''} 
+                                onChange={e => {
+                                  const updated = [...newProduct.variations];
+                                  updated[idx].salePrice = e.target.value;
+                                  setNewProduct({...newProduct, variations: updated});
+                                }}
+                                placeholder="Sale" 
+                                className="w-full px-2 py-1.5 text-xs border border-stone-300 rounded focus:ring-1 focus:ring-lime-500 outline-none"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => {
+                            const updated = newProduct.variations.filter((_, i) => i !== idx);
+                            setNewProduct({...newProduct, variations: updated});
+                          }}
+                          className="p-1.5 text-red-500 hover:bg-white rounded transition-colors"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setNewProduct({
+                          ...newProduct, 
+                          variations: [...newProduct.variations, { name: '', price: '', salePrice: '' }]
+                        });
+                      }}
+                      className="w-full py-2 border-2 border-dashed border-stone-300 rounded-lg text-stone-500 text-xs font-bold hover:border-lime-500 hover:text-lime-600 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Plus size={14} /> Add Variation
+                    </button>
+                  </div>
+                </div>
+
                 <ImageUpload
                   label="Product Image (1:1 recommended)"
                   value={newProduct.imageUrl}
