@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { db } from '../firebase';
 import { handleFirestoreError, OperationType } from '../utils/firebaseErrors';
-import { siteId } from '../constants/siteConfig';
+import { siteId, DEFAULT_PRODUCT_IMAGE } from '../constants/siteConfig';
 import Pagination from '../components/Pagination';
 
 const ITEMS_PER_PAGE = 6;
@@ -142,19 +142,12 @@ export default function Products() {
                 {paginatedProducts.map((product) => (
                   <div key={product.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all border border-stone-100 group flex flex-col">
                   <div className="relative h-72 overflow-hidden">
-                    {product.imageUrl ? (
-                      <img
-                        src={product.imageUrl}
-                        alt={product.name}
-                        className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-500 p-2"
-                        referrerPolicy="no-referrer"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-stone-50 flex flex-col items-center justify-center text-stone-300">
-                        <Leaf size={48} className="opacity-20 mb-2" />
-                        <span className="text-xs uppercase font-bold tracking-widest">Alayo Health</span>
-                      </div>
-                    )}
+                    <img
+                      src={product.imageUrl || DEFAULT_PRODUCT_IMAGE}
+                      alt={product.name}
+                      className="w-full h-full object-contain transform group-hover:scale-105 transition-transform duration-500 p-2"
+                      referrerPolicy="no-referrer"
+                    />
                   </div>
                   <div className="p-8 flex flex-col flex-grow">
                     <h3 className="text-2xl font-bold text-stone-900 leading-tight mb-3 group-hover:text-lime-600 transition-colors">{product.name}</h3>

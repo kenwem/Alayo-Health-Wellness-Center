@@ -5,7 +5,7 @@ import { db } from '../../firebase';
 import ImageUpload from '../../components/admin/ImageUpload';
 import Pagination from '../../components/Pagination';
 import { handleFirestoreError, OperationType } from '../../utils/firebaseErrors';
-import { siteId } from '../../constants/siteConfig';
+import { siteId, DEFAULT_PRODUCT_IMAGE } from '../../constants/siteConfig';
 
 interface Product {
   id: string;
@@ -23,7 +23,7 @@ export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [sortBy, setSortBy] = useState<'name' | 'price' | 'stock' | 'position'>('position');
+  const [sortBy, setSortBy] = useState<'name' | 'price' | 'stock' | 'position'>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
@@ -228,39 +228,53 @@ export default function AdminProducts() {
           <table className="w-full text-left">
             <thead className="bg-stone-50 border-b border-stone-200">
               <tr>
+                <th className="px-6 py-4 text-sm font-semibold text-stone-600 w-16">#</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Pos</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Image</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Product Name</th>
-                <th className="px-6 py-4 text-sm font-semibold text-stone-600">Price</th>
+                <th className="px-6 py-4 text-sm font-semibold text-stone-600">Price Range</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600">Stock</th>
                 <th className="px-6 py-4 text-sm font-semibold text-stone-600 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-stone-200">
-              {paginatedProducts.map((product) => (
+              {paginatedProducts.map((product, index) => (
                 <tr key={product.id} className="hover:bg-stone-50">
+                  <td className="px-6 py-4 text-stone-400 text-xs font-medium">
+                    {(currentPage - 1) * itemsPerPage + index + 1}
+                  </td>
                   <td className="px-6 py-4 text-stone-400 text-xs font-mono">{product.position || 0}</td>
                   <td className="px-6 py-4">
-                    {product.imageUrl ? (
-                      <div className="w-12 h-12 bg-white border border-stone-100 rounded-md overflow-hidden">
-                        <img src={product.imageUrl} alt={product.name} className="w-full h-full object-contain" referrerPolicy="no-referrer" />
-                      </div>
-                    ) : (
-                      <div className="w-12 h-12 bg-stone-200 rounded-md flex items-center justify-center text-stone-400 text-xs">No Img</div>
-                    )}
+                    <div className="w-12 h-12 bg-white border border-stone-100 rounded-md overflow-hidden">
+                      <img 
+                        src={product.imageUrl || DEFAULT_PRODUCT_IMAGE} 
+                        alt={product.name} 
+                        className="w-full h-full object-contain" 
+                        referrerPolicy="no-referrer" 
+                      />
+                    </div>
                   </td>
                   <td className="px-6 py-4 text-stone-800 font-medium">
                     <div>{product.name}</div>
                     {product.shortDescription && <div className="text-xs text-stone-500 font-normal mt-1 truncate max-w-xs">{product.shortDescription}</div>}
                   </td>
                   <td className="px-6 py-4 text-stone-600">
-                    {product.salePrice ? (
-                      <div>
-                        <span className="text-red-600 font-medium">{product.salePrice}</span>
-                        <span className="text-stone-400 line-through text-xs ml-2">{product.price}</span>
+                    {product.variations && product.variations.length > 0 ? (
+                      <div className="text-xs">
+                        <div className="font-bold text-lime-600">Variations ({product.variations.length})</div>
+                        <div className="text-stone-400">
+                          {product.variations[0].price} - {product.variations[product.variations.length - 1].price}
+                        </div>
                       </div>
                     ) : (
-                      <span>{product.price}</span>
+                      product.salePrice ? (
+                        <div>
+                          <span className="text-red-600 font-medium">{product.salePrice}</span>
+                          <span className="text-stone-400 line-through text-xs ml-2">{product.price}</span>
+                        </div>
+                      ) : (
+                        <span>{product.price}</span>
+                      )
                     )}
                   </td>
                   <td className="px-6 py-4 text-stone-600">{product.stock}</td>

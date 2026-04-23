@@ -114,11 +114,23 @@ export default function AdminEditorial() {
     }
   };
 
+  const slugify = (text: string) => {
+    return text
+      .toString()
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')           // Replace spaces with -
+      .replace(/[^\w-]+/g, '')       // Remove all non-word chars
+      .replace(/--+/g, '-')         // Replace multiple - with single -
+      .replace(/^-+/, '')             // Trim - from start of text
+      .replace(/-+$/, '');            // Trim - from end of text
+  };
+
   const handleEdit = (post: EditorialPost) => {
     setEditingId(post.id);
     setNewPost({
       title: post.title,
-      slug: post.slug || post.title.toLowerCase().replace(/\s+/g, '-'),
+      slug: post.slug || slugify(post.title),
       coverImage: post.image || '',
       manualImageUrl: post.image || '',
       content: post.content || '',
@@ -143,7 +155,7 @@ export default function AdminEditorial() {
     
     const postData = {
       title: newPost.title,
-      slug: newPost.slug || newPost.title.toLowerCase().replace(/\s+/g, '-'),
+      slug: newPost.slug || slugify(newPost.title),
       author: 'Prof. Kayode Oseni',
       date: newPost.publishDate || today,
       status: newPost.status,
